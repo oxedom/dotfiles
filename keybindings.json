@@ -1,0 +1,23 @@
+    {
+        "key": "ctrl+down",
+        "command": "workbench.action.terminal.focus",
+    },
+    {
+        "key": "ctrl+up",
+        "command": "workbench.action.focusActiveEditorGroup",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "ctrl+right",
+        "command": "workbench.action.terminal.focusNext",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "ctrl+left",
+        "command": "workbench.action.terminal.focusPrevious",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "ctrl+f12",
+        "command": "editor.action.openLink"
+    }
