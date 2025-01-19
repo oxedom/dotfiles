@@ -20,4 +20,8 @@
     {
         "key": "ctrl+f12",
         "command": "editor.action.openLink"
+    },
+    {
+    "key": "ctrl+h",
+    "command": "expandLineSelection"
     }
