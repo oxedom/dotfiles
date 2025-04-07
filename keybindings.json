@@ -24,4 +24,12 @@
     {
     "key": "ctrl+h",
     "command": "expandLineSelection"
-    }
+    },
+  {
+    "key": "ctrl+shift+x",
+    "command": "editor.cpp.disableenabled"
+  },
+  {
+    "key": "ctrl+shift+c",
+    "command": "editor.action.enableCppGlobally"
+  }
