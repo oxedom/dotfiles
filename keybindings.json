@@ -32,4 +32,9 @@
   {
     "key": "ctrl+shift+c",
     "command": "editor.action.enableCppGlobally"
-  }
+  },
+    {
+        "key": "ctrl+alt+z",
+        "command": "workbench.action.toggleMaximizedPanel",
+        "when": "terminalFocus"
+    }
