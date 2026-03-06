@@ -25,6 +25,7 @@ LINKS=(
     "$DIR/.config/kitty:$HOME/.config/kitty"
     "$DIR/.config/pnpm:$HOME/.config/pnpm"
     "$DIR/.tmux.conf:$HOME/.tmux.conf"
+    "$DIR/.Xmodmap:$HOME/.Xmodmap"
 )
 
 mkdir -p "$HOME/.config"
