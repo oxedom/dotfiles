@@ -2,17 +2,58 @@
 
 # Get the absolute path of the directory containing this script
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-ALIASES="$DIR/aliases.sh"
 
+# --- Aliases ---
+ALIASES="$DIR/aliases.sh"
 if [ -f "$ALIASES" ]; then
     if grep -qF "source $ALIASES" ~/.bashrc; then
-        echo "Aliases already sourced in ~/.bashrc"
+        echo "[aliases] Already sourced in ~/.bashrc"
     else
         echo "" >> ~/.bashrc
         echo "# Load custom aliases from dotfiles" >> ~/.bashrc
         echo "source $ALIASES" >> ~/.bashrc
-        echo "Added $ALIASES to ~/.bashrc"
+        echo "[aliases] Added to ~/.bashrc"
     fi
 else
-    echo "Error: aliases.sh not found in $DIR"
+    echo "[aliases] Error: aliases.sh not found in $DIR"
 fi
+
+# --- Symlink configs ---
+# Each entry: "source:target"
+LINKS=(
+    "$DIR/.config/nvim:$HOME/.config/nvim"
+    "$DIR/.config/kitty:$HOME/.config/kitty"
+    "$DIR/.config/pnpm:$HOME/.config/pnpm"
+    "$DIR/.tmux.conf:$HOME/.tmux.conf"
+)
+
+mkdir -p "$HOME/.config"
+
+for entry in "${LINKS[@]}"; do
+    src="${entry%%:*}"
+    dest="${entry##*:}"
+
+    if [ ! -e "$src" ]; then
+        echo "[skip] Source not found: $src"
+        continue
+    fi
+
+    if [ -L "$dest" ]; then
+        current_target="$(readlink -f "$dest")"
+        if [ "$current_target" = "$(readlink -f "$src")" ]; then
+            echo "[ok] $dest -> $src"
+            continue
+        fi
+        echo "[update] Replacing symlink $dest"
+        rm "$dest"
+    elif [ -e "$dest" ]; then
+        echo "[backup] $dest -> ${dest}.bak"
+        mv "$dest" "${dest}.bak"
+    fi
+
+    ln -s "$src" "$dest"
+    echo "[link] $dest -> $src"
+done
+
+echo ""
+echo "Done! Restart your shell or run: source ~/.bashrc"
