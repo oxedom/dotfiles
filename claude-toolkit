@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ─── Resolve source directory ───
-# CLAUDE_TOOLKIT_SOURCE can override; defaults to ~/repos/ai-data-dump/.claude
-SOURCE_DIR="${CLAUDE_TOOLKIT_SOURCE:-$HOME/repos/ai-data-dump/.claude}"
+# ─── Resolve source directory (follows symlinks) ───
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+TOOLKIT_DIR="$(dirname "$SCRIPT_PATH")"
+SOURCE_DIR="${CLAUDE_TOOLKIT_SOURCE:-$TOOLKIT_DIR/.claude}"
 TARGET_DIR="$PWD/.claude"
 
 # ─── Colors ───
@@ -239,8 +240,8 @@ main() {
     printf "Target:  ${DIM}%s${RESET}\n\n" "$TARGET_DIR"
 
     # Warn if running inside the source repo itself
-    if [[ "$(readlink -f "$PWD/.claude")" == "$(readlink -f "$SOURCE_DIR")" ]]; then
-        warn "You're inside the toolkit source repo. Run this from your target project."
+    if [[ "$(readlink -f "$PWD")" == "$(readlink -f "$TOOLKIT_DIR")" ]]; then
+        warn "You're inside the dotfiles repo. Run this from your target project."
         read -rp "Continue anyway? [y/N] " confirm
         [[ "$confirm" =~ ^[yY]$ ]] || exit 0
     fi
