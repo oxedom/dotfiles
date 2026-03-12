@@ -8,3 +8,4 @@ elif command -v xclip >/dev/null 2>&1; then
 fi
 alias clip='klip'
 alias dclaude="claude --dangerously-skip-permissions"
+alias claude-toolkit="$HOME/dotfiles/claude-toolkit"

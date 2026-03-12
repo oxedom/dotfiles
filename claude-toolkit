@@ -1,0 +1,306 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ─── Resolve source directory ───
+# CLAUDE_TOOLKIT_SOURCE can override; defaults to ~/repos/ai-data-dump/.claude
+SOURCE_DIR="${CLAUDE_TOOLKIT_SOURCE:-$HOME/repos/ai-data-dump/.claude}"
+TARGET_DIR="$PWD/.claude"
+
+# ─── Colors ───
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+DIM='\033[2m'
+RESET='\033[0m'
+
+# ─── State ───
+OVERWRITE_ALL=false
+TOTAL_COPIED=0
+
+# ─── Helpers ───
+info()  { printf "${CYAN}%s${RESET}\n" "$*"; }
+ok()    { printf "  ${GREEN}✓${RESET} %s\n" "$*"; }
+warn()  { printf "  ${YELLOW}!${RESET} %s\n" "$*"; }
+err()   { printf "${RED}Error:${RESET} %s\n" "$*" >&2; }
+
+has_gum() { command -v gum &>/dev/null; }
+
+# Extract description from frontmatter (first 'description:' line)
+get_description() {
+    local file="$1"
+    sed -n '/^---$/,/^---$/{ s/^description: *//p; }' "$file" 2>/dev/null | head -1 | cut -c1-80
+}
+
+# ─── Multi-select picker ───
+# Returns selected items (one per line) via stdout
+pick_items() {
+    local category="$1"
+    shift
+    local items=("$@")
+
+    if [[ ${#items[@]} -eq 0 ]]; then
+        return
+    fi
+
+    if has_gum; then
+        printf '%s\n' "${items[@]}" | gum choose --no-limit \
+            --header="Select ${category} to install:" \
+            --cursor.foreground="6" \
+            --selected.foreground="2"
+    else
+        # Fallback: numbered selection
+        echo ""
+        printf "${BOLD}Select %s to install (space-separated numbers, or 'all'):${RESET}\n" "$category"
+        local i=1
+        for item in "${items[@]}"; do
+            printf "  ${DIM}%2d)${RESET} %s\n" "$i" "$item"
+            ((i++))
+        done
+        read -rp "> " selection
+        if [[ "$selection" == "all" ]]; then
+            printf '%s\n' "${items[@]}"
+        elif [[ -n "$selection" ]]; then
+            for num in $selection; do
+                if [[ "$num" =~ ^[0-9]+$ ]] && (( num >= 1 && num <= ${#items[@]} )); then
+                    echo "${items[$((num-1))]}"
+                fi
+            done
+        fi
+    fi
+}
+
+# ─── Copy with overwrite handling ───
+copy_item() {
+    local src="$1" dst="$2"
+
+    if [[ -e "$dst" ]] && [[ "$OVERWRITE_ALL" != true ]]; then
+        local basename
+        basename="$(basename "$dst")"
+        if has_gum; then
+            local action
+            action=$(printf "overwrite\nskip\noverwrite all" | gum choose --header="'$basename' already exists:")
+        else
+            printf "  ${YELLOW}'%s' already exists.${RESET} [o]verwrite / [s]kip / overwrite [a]ll? " "$basename"
+            read -rn1 action
+            echo
+            case "$action" in
+                o) action="overwrite" ;;
+                a) action="overwrite all" ;;
+                *) action="skip" ;;
+            esac
+        fi
+
+        case "$action" in
+            "overwrite all") OVERWRITE_ALL=true ;;
+            "skip") warn "Skipped $basename"; return ;;
+        esac
+    fi
+
+    if [[ -d "$src" ]]; then
+        cp -r "$src" "$dst"
+    else
+        cp "$src" "$dst"
+    fi
+    TOTAL_COPIED=$((TOTAL_COPIED + 1))
+}
+
+# ─── Build display labels: "name — description" ───
+build_labels() {
+    local category="$1"
+    local dir="$SOURCE_DIR/$category"
+    local -n out_labels=$2
+    local -n out_names=$3
+
+    out_labels=()
+    out_names=()
+
+    if [[ "$category" == "skills" ]]; then
+        for skill_dir in "$dir"/*/; do
+            [[ -d "$skill_dir" ]] || continue
+            local name
+            name="$(basename "$skill_dir")"
+            local desc=""
+            if [[ -f "$skill_dir/SKILL.md" ]]; then
+                desc="$(get_description "$skill_dir/SKILL.md")"
+            fi
+            if [[ -n "$desc" ]]; then
+                out_labels+=("$name — $desc")
+            else
+                out_labels+=("$name")
+            fi
+            out_names+=("$name")
+        done
+    else
+        for file in "$dir"/*.md; do
+            [[ -f "$file" ]] || continue
+            local name
+            name="$(basename "$file" .md)"
+            local desc=""
+            desc="$(get_description "$file")"
+            if [[ -n "$desc" ]]; then
+                out_labels+=("$name — $desc")
+            else
+                out_labels+=("$name")
+            fi
+            out_names+=("$name")
+        done
+    fi
+}
+
+# ─── Extract name from label ───
+label_to_name() {
+    echo "$1" | sed 's/ — .*//'
+}
+
+# ─── Usage ───
+usage() {
+    cat <<EOF
+${BOLD}Claude Toolkit${RESET} — Install Claude Code configs into any project
+
+${BOLD}Usage:${RESET}
+  claude-toolkit              Interactive install
+  claude-toolkit --list       List available items
+  claude-toolkit --all        Install everything without prompting
+  claude-toolkit --help       Show this help
+
+${BOLD}Categories:${RESET}
+  agents      Agent definitions (.claude/agents/)
+  commands    Slash commands (.claude/commands/)
+  skills      Skill packages (.claude/skills/)
+EOF
+}
+
+# ─── List command ───
+list_items() {
+    for category in agents commands skills; do
+        local labels=() names=()
+        build_labels "$category" labels names
+        printf "\n${BOLD}%s${RESET} (%d)\n" "$category" "${#names[@]}"
+        for label in "${labels[@]}"; do
+            printf "  %s\n" "$label"
+        done
+    done
+    echo
+}
+
+# ─── Install logic ───
+install_category() {
+    local category="$1"
+    local selected_names=("${@:2}")
+    local count=0
+
+    [[ ${#selected_names[@]} -eq 0 ]] && return
+
+    mkdir -p "$TARGET_DIR/$category"
+    ok "Created .claude/$category/"
+
+    for name in "${selected_names[@]}"; do
+        if [[ "$category" == "skills" ]]; then
+            local src="$SOURCE_DIR/$category/$name"
+            local dst="$TARGET_DIR/$category/$name"
+            local file_count
+            file_count=$(find "$src" -type f | wc -l)
+            copy_item "$src" "$dst"
+            ok "Copied skill: $name ($file_count files)"
+        else
+            local src="$SOURCE_DIR/$category/${name}.md"
+            local dst="$TARGET_DIR/$category/${name}.md"
+            copy_item "$src" "$dst"
+            ok "Copied: $name"
+        fi
+        count=$((count + 1))
+    done
+
+    info "  → $count $category installed"
+}
+
+# ─── Main ───
+main() {
+    # Parse flags
+    case "${1:-}" in
+        --help|-h) usage; exit 0 ;;
+        --list|-l) list_items; exit 0 ;;
+        --all|-a)
+            local install_all=true
+            OVERWRITE_ALL=true ;;
+        init|"")
+            local install_all=false ;;
+        *)
+            err "Unknown option: $1"
+            usage
+            exit 1 ;;
+    esac
+
+    echo ""
+    printf "${BOLD}Claude Toolkit${RESET} — Install Claude Code configs into current project\n\n"
+    printf "Source:  ${DIM}%s${RESET}\n" "$SOURCE_DIR"
+    printf "Target:  ${DIM}%s${RESET}\n\n" "$TARGET_DIR"
+
+    # Warn if running inside the source repo itself
+    if [[ "$(readlink -f "$PWD/.claude")" == "$(readlink -f "$SOURCE_DIR")" ]]; then
+        warn "You're inside the toolkit source repo. Run this from your target project."
+        read -rp "Continue anyway? [y/N] " confirm
+        [[ "$confirm" =~ ^[yY]$ ]] || exit 0
+    fi
+
+    if ! has_gum; then
+        warn "gum not found — using basic numbered selection"
+        warn "Install gum for a better experience: https://github.com/charmbracelet/gum"
+        echo ""
+    fi
+
+    # Process each category
+    for category in agents commands skills; do
+        local labels=() names=()
+        build_labels "$category" labels names
+
+        if [[ ${#names[@]} -eq 0 ]]; then
+            continue
+        fi
+
+        local selected_names=()
+
+        if [[ "$install_all" == true ]]; then
+            selected_names=("${names[@]}")
+        else
+            local selected_labels
+            selected_labels="$(pick_items "$category" "${labels[@]}")" || true
+
+            if [[ -n "$selected_labels" ]]; then
+                while IFS= read -r label; do
+                    selected_names+=("$(label_to_name "$label")")
+                done <<< "$selected_labels"
+            fi
+        fi
+
+        if [[ ${#selected_names[@]} -gt 0 ]]; then
+            install_category "$category" "${selected_names[@]}"
+        fi
+        echo ""
+    done
+
+    # Agent template
+    if [[ -f "$SOURCE_DIR/agent-template.md" ]]; then
+        if [[ "$install_all" == true ]]; then
+            copy_agent_template=true
+        elif has_gum; then
+            copy_agent_template=$(gum confirm "Also copy agent-template.md?" && echo true || echo false)
+        else
+            read -rp "Also copy agent-template.md? [y/N] " yn
+            [[ "$yn" =~ ^[yY]$ ]] && copy_agent_template=true || copy_agent_template=false
+        fi
+
+        if [[ "$copy_agent_template" == true ]]; then
+            mkdir -p "$TARGET_DIR"
+            copy_item "$SOURCE_DIR/agent-template.md" "$TARGET_DIR/agent-template.md"
+            ok "Copied agent-template.md"
+        fi
+    fi
+
+    echo ""
+    printf "${GREEN}${BOLD}Done!${RESET} Installed ${BOLD}%d${RESET} items to %s\n" "$TOTAL_COPIED" "$TARGET_DIR"
+}
+
+main "$@"
