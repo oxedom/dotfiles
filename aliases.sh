@@ -7,3 +7,4 @@ elif command -v xclip >/dev/null 2>&1; then
     alias klip='xclip -selection clipboard'
 fi
 alias clip='klip'
+alias dclaude="claude --dangerously-skip-permissions"
