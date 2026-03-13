@@ -52,11 +52,11 @@ pick_items() {
             --selected.foreground="2"
     else
         # Fallback: numbered selection
-        echo ""
-        printf "${BOLD}Select %s to install (space-separated numbers, or 'all'):${RESET}\n" "$category"
+        echo "" >&2
+        printf "${BOLD}Select %s to install (space-separated numbers, or 'all'):${RESET}\n" "$category" >&2
         local i=1
         for item in "${items[@]}"; do
-            printf "  ${DIM}%2d)${RESET} %s\n" "$i" "$item"
+            printf "  ${DIM}%2d)${RESET} %s\n" "$i" "$item" >&2
             ((i++))
         done
         read -rp "> " selection
