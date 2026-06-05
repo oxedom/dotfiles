@@ -30,7 +30,9 @@
   },
   "enabledPlugins": {
     "candlekeep-cloud@candlekeep": true,
-    "superpowers@claude-plugins-official": true
+    "context7@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "candlekeep": {
