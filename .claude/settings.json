@@ -1,5 +1,69 @@
 {
-  "env": {
-    "MAX_THINKING_TOKENS": "32000"
-  }
+  "model": "sonnet",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/tmux-merge-sessions.sh",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f ~/.claude/sounds/finish.mp3 ]; then cvlc --play-and-exit --quiet ~/.claude/sounds/finish.mp3 2>/dev/null || true; else paplay /usr/share/sounds/sound-icons/piano-3.wav 2>/dev/null || true; fi",
+            "async": true
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/statusline-command.sh"
+  },
+  "enabledPlugins": {
+    "candlekeep-cloud@candlekeep": true,
+    "superpowers@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "candlekeep": {
+      "source": {
+        "source": "github",
+        "repo": "CandleKeepAgents/candlekeep-marketplace"
+      }
+    },
+    "superpowers-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "obra/superpowers-marketplace"
+      }
+    },
+    "understand-anything": {
+      "source": {
+        "source": "github",
+        "repo": "Lum1104/Understand-Anything"
+      }
+    },
+    "redis": {
+      "source": {
+        "source": "github",
+        "repo": "redis/agent-skills"
+      }
+    }
+  },
+  "effortLevel": "high",
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "dark",
+  "preferredNotifChannel": "iterm2",
+  "autoCompactEnabled": false,
+  "agentPushNotifEnabled": true,
+  "skipAutoPermissionPrompt": true,
+  "voiceEnabled": true
 }

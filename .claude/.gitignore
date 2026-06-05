@@ -1,0 +1,13 @@
+# Claude Code runtime data — never commit
+.credentials.json
+backups/
+cache/
+debug/
+downloads/
+file-history/
+projects/
+transcripts/
+sounds/
+mcp-needs-auth-cache.json
+stats-cache.json
+settings.local.json
