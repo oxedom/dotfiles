@@ -60,7 +60,8 @@ fi
 
 # Dotfiles
 source ~/dotfiles/aliases.sh
-source ~/dotfiles/secrets.sh
+# secrets.sh is gitignored and absent on a fresh machine — don't error if it isn't there.
+[ -f ~/dotfiles/secrets.sh ] && source ~/dotfiles/secrets.sh
 
 # tmux: merge all sessions into current
 mtmux() {
@@ -89,8 +90,9 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 export PATH=$PATH:/usr/local/go/bin
 
 # pnpm
-export PNPM_HOME="/home/sam/.local/share/pnpm"
+export PNPM_HOME="$HOME/.local/share/pnpm"
 case ":$PATH:" in
   *":$PNPM_HOME:"*) ;;
   *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
+

@@ -37,16 +37,19 @@ link() {
 if [ "$TARGET" = all ] || [ "$TARGET" = shell ]; then
   head_ "Shell + editor configs"
 
-  # Source aliases from whichever rc exists (bash on Linux/WSL, zsh on macOS).
-  for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
-    [ -f "$rc" ] || continue
-    if grep -qF "source $DIR/aliases.sh" "$rc"; then
-      info "[ok]   aliases already sourced in $(basename "$rc")"
+  # .bashrc is tracked and already sources aliases.sh, so link it like any other
+  # config. (Appending to it instead would write through the symlink into the repo.)
+  link "$DIR/.bashrc" "$HOME/.bashrc"
+
+  # zsh (macOS default) has no tracked rc, so append the source line there instead.
+  if [ -f "$HOME/.zshrc" ]; then
+    if grep -qF "dotfiles/aliases.sh" "$HOME/.zshrc"; then
+      info "[ok]   aliases already sourced in .zshrc"
     else
-      printf '\n# dotfiles\nsource %s/aliases.sh\n' "$DIR" >> "$rc"
-      info "[add]  aliases sourced in $(basename "$rc")"
+      printf '\n# dotfiles\nsource %s/aliases.sh\n' "$DIR" >> "$HOME/.zshrc"
+      info "[add]  aliases sourced in .zshrc"
     fi
-  done
+  fi
 
   link "$DIR/.tmux.conf"   "$HOME/.tmux.conf"
   link "$DIR/.config/nvim" "$HOME/.config/nvim"

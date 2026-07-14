@@ -23,7 +23,7 @@ Take a project from nothing to a **named, private GitHub repo** with onboarding 
 
 These are the traps that bite. Honor every one.
 
-- **Never `git init` inside an existing repo.** The session cwd may already be a git repo (e.g. `/home/sam/projects` is). Run `git rev-parse --show-toplevel` at the intended parent; if it returns a path, the new project would be **nested**. Stop and pick a location *outside* any repo.
+- **Never `git init` inside an existing repo.** The session cwd may already be a git repo (a `~/projects` parent often is). Run `git rev-parse --show-toplevel` at the intended parent; if it returns a path, the new project would be **nested**. Stop and pick a location *outside* any repo.
 - **Confirm the name is free** — both the local directory AND the GitHub repo — before committing to it. `gh repo create` fails late otherwise.
 - **`.env` must be in `.gitignore` before the first `git add`.** Eyeball `git status` before committing so no secret is staged.
 - **Always `--private`.** Never `--public`. Never assume; the request is private.
@@ -115,7 +115,7 @@ gh repo view <slug> --json visibility,url   # verify visibility == PRIVATE
 
 ### 9. Persistent memory entry (the easily-forgotten step)
 
-Onboard *future sessions*, not just this repo. Write a memory file into the session's auto-memory directory — the one whose `MEMORY.md` is loaded into context at session start. It's `~/.claude/projects/<cwd-with-slashes-as-dashes>/memory/` (on this machine, run from `/home/sam/projects`, that's `/home/sam/.claude/projects/-home-sam-projects/memory/`):
+Onboard *future sessions*, not just this repo. Write a memory file into the session's auto-memory directory — the one whose `MEMORY.md` is loaded into context at session start. It's `~/.claude/projects/<cwd-with-slashes-as-dashes>/memory/` (e.g. a session started from `~/projects` maps to `~/.claude/projects/-home-<user>-projects/memory/`):
 
 `project_<slug>.md`:
 ```markdown

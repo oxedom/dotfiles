@@ -15,8 +15,9 @@ section with `init shell`, `init claude`, or `init skills`.
 
 It will:
 
-1. **shell** — source `aliases.sh` from your `.bashrc`/`.zshrc`, symlink tmux, nvim,
-   pnpm (plus kitty and Xmodmap on Linux).
+1. **shell** — symlink `.bashrc` (which sources `aliases.sh`), tmux, nvim and pnpm,
+   plus kitty and Xmodmap on Linux. On macOS it appends the alias source line to
+   `.zshrc` instead.
 2. **claude** — symlink `claude-global/` into `~/.claude`, then register MCP servers
    if `secrets.sh` exists.
 3. **skills** — install this repo's skills globally and replay every third-party skill
