@@ -43,3 +43,10 @@ No lengthy intros or outros ("Great question!", "Hope this helps!", etc.)
 No unsolicited code — if code is the answer, ask first or note it's available
 
 </always>
+
+<!--
+Optional: browser-harness skill import.
+Requires: git clone https://github.com/browser-use/browser-harness ~/Developer/browser-harness
+Then uncomment:
+@~/Developer/browser-harness/SKILL.md
+-->

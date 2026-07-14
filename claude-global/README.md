@@ -1,46 +1,49 @@
 # claude-global
 
-Tracked pieces of the global `~/.claude/` configuration. Sensitive/session state
-lives outside this directory and is never committed.
+Everything that becomes `~/.claude`. `../init claude` symlinks each entry below into
+place, so editing a file here edits the live config.
 
-## Layout
+| Path | Symlinked to | What |
+|---|---|---|
+| `settings.json` | `~/.claude/settings.json` | Model, hooks, statusline, marketplaces |
+| `settings.local.json` | `~/.claude/settings.local.json` | Permission allowlist |
+| `CLAUDE.md` | `~/.claude/CLAUDE.md` | Global persona and tone |
+| `rules/` | `~/.claude/rules/` | Always-on rules (context7) |
+| `agents/` | `~/.claude/agents/` | Subagents |
+| `commands/` | `~/.claude/commands/` | Slash commands |
+| `hooks/` | `~/.claude/hooks/` | SessionStart tmux-merge |
+| `sounds/` | `~/.claude/sounds/` | Stop-hook chime |
+| `statusline-command.sh` | `~/.claude/statusline-command.sh` | Statusline |
 
-| Path | Symlinked from |
-|------|----------------|
-| `settings.json` | `~/.claude/settings.json` |
-| `settings.local.json` | `~/.claude/settings.local.json` |
-| `rules/` | `~/.claude/rules/` |
-| `mcp-servers.example.json` | (reference only — real config lives in `~/.claude.json`) |
-| `install-mcp.sh` | one-shot MCP registration script |
+`agent-template.md` is a scaffold for writing new subagents, not a live config file.
 
-## Fresh-machine setup
+## MCP servers
+
+`install-mcp.sh` registers user-scope MCP servers and is idempotent. It reads keys from
+`~/dotfiles/secrets.sh` (gitignored); `mcp-servers.example.json` lists which keys it wants.
 
 ```bash
-# 1) Symlink tracked configs into ~/.claude
-mkdir -p ~/.claude
-ln -sfn ~/dotfiles/claude-global/settings.json       ~/.claude/settings.json
-ln -sfn ~/dotfiles/claude-global/settings.local.json ~/.claude/settings.local.json
-ln -sfn ~/dotfiles/claude-global/rules               ~/.claude/rules
-
-# 2) Populate ~/dotfiles/secrets.sh with API keys (see mcp-servers.example.json),
-#    then register global MCP servers:
-~/dotfiles/claude-global/install-mcp.sh
+../init claude          # symlinks, then runs install-mcp.sh if secrets.sh exists
 ```
 
 ## Skills
 
-Global skills (`~/.claude/skills/*`) are **not** tracked here. On this machine
-they are symlinks into `~/.agents/skills/`, which is populated by an external
-skill-installer keyed off `~/.agents/.skill-lock.json`. Reinstall skills there
-on a fresh machine rather than syncing them via dotfiles.
+Skills are **not** vendored here.
 
-The one exception, `context7-mcp`, is duplicated inside the project-level
-template at `~/dotfiles/.claude/skills/context7-mcp/` (installed into projects
-via `claude-toolkit`).
+- **Mine** live in `../skills/` and install with
+  `npx skills@latest add oxedom/dotfiles -g -s '*'`.
+- **Third-party** ones are recorded in `skills-lock.json` (source repo + skill name per
+  entry) and reinstalled from their upstreams by `../init skills`.
 
-## What is deliberately NOT tracked
+Both land in `~/.agents/skills/`, which `~/.claude/skills/` symlinks into. To capture a
+newly installed skill for future machines, refresh the lockfile:
 
-`~/.claude.json`, `.credentials.json`, `sessions/`, `projects/`, `history.jsonl`,
-`todos/`, `tasks/`, `plans/`, `statsig/`, `telemetry/`, `debug/`, `file-history/`,
-`shell-snapshots/`, `session-env/`, `paste-cache/`, `ide/`, `stats-cache.json`,
-`backups/`, `cache/`, `plugins/{cache,data,repos}` — all ephemeral or sensitive.
+```bash
+cp ~/.agents/.skill-lock.json ~/dotfiles/claude-global/skills-lock.json
+```
+
+## Never tracked
+
+`~/.claude.json`, `.credentials.json`, `projects/`, `history.jsonl`, `todos/`, `plans/`,
+`statsig/`, `telemetry/`, `debug/`, `file-history/`, `shell-snapshots/`, `paste-cache/`,
+`ide/`, `backups/`, `cache/`, `plugins/` — all ephemeral or sensitive.

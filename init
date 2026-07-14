@@ -1,60 +1,117 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# Bootstrap this machine from dotfiles. Idempotent: safe to re-run.
+#
+#   ~/dotfiles/init            # everything
+#   ~/dotfiles/init shell      # shell + editor configs only
+#   ~/dotfiles/init claude     # ~/.claude config only
+#   ~/dotfiles/init skills     # reinstall agent skills from the lockfile
+#
+set -uo pipefail
 
-# Get the absolute path of the directory containing this script
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+TARGET="${1:-all}"
 
-# --- Aliases ---
-ALIASES="$DIR/aliases.sh"
-if [ -f "$ALIASES" ]; then
-    if grep -qF "source $ALIASES" ~/.bashrc; then
-        echo "[aliases] Already sourced in ~/.bashrc"
+info()  { printf '  %s\n' "$*"; }
+head_() { printf '\n\033[1m%s\033[0m\n' "$*"; }
+
+# link <src> <dest> — symlink, backing up anything real that's in the way.
+link() {
+  local src="$1" dest="$2"
+  [ -e "$src" ] || { info "[skip] missing: $src"; return; }
+  mkdir -p "$(dirname "$dest")"
+
+  if [ -L "$dest" ]; then
+    [ "$(readlink -f "$dest")" = "$(readlink -f "$src")" ] && { info "[ok]   $dest"; return; }
+    rm "$dest"
+  elif [ -e "$dest" ]; then
+    mv "$dest" "$dest.bak.$(date +%s)"
+    info "[bak]  $dest -> $dest.bak.*"
+  fi
+
+  ln -s "$src" "$dest"
+  info "[link] $dest"
+}
+
+# ---------------------------------------------------------------- shell
+if [ "$TARGET" = all ] || [ "$TARGET" = shell ]; then
+  head_ "Shell + editor configs"
+
+  # Source aliases from whichever rc exists (bash on Linux/WSL, zsh on macOS).
+  for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
+    [ -f "$rc" ] || continue
+    if grep -qF "source $DIR/aliases.sh" "$rc"; then
+      info "[ok]   aliases already sourced in $(basename "$rc")"
     else
-        echo "" >> ~/.bashrc
-        echo "# Load custom aliases from dotfiles" >> ~/.bashrc
-        echo "source $ALIASES" >> ~/.bashrc
-        echo "[aliases] Added to ~/.bashrc"
+      printf '\n# dotfiles\nsource %s/aliases.sh\n' "$DIR" >> "$rc"
+      info "[add]  aliases sourced in $(basename "$rc")"
     fi
-else
-    echo "[aliases] Error: aliases.sh not found in $DIR"
+  done
+
+  link "$DIR/.tmux.conf"   "$HOME/.tmux.conf"
+  link "$DIR/.config/nvim" "$HOME/.config/nvim"
+  link "$DIR/.config/pnpm" "$HOME/.config/pnpm"
+
+  # Linux/WSL only — macOS has no X11, and kitty config lives elsewhere.
+  if [ "$(uname -s)" != "Darwin" ]; then
+    link "$DIR/.Xmodmap"      "$HOME/.Xmodmap"
+    link "$DIR/.config/kitty" "$HOME/.config/kitty"
+  fi
 fi
 
-# --- Symlink configs ---
-# Each entry: "source:target"
-LINKS=(
-    "$DIR/.config/nvim:$HOME/.config/nvim"
-    "$DIR/.config/kitty:$HOME/.config/kitty"
-    "$DIR/.config/pnpm:$HOME/.config/pnpm"
-    "$DIR/.tmux.conf:$HOME/.tmux.conf"
-    "$DIR/.Xmodmap:$HOME/.Xmodmap"
-)
+# ---------------------------------------------------------------- claude
+if [ "$TARGET" = all ] || [ "$TARGET" = claude ]; then
+  head_ "Claude Code global config (~/.claude)"
 
-mkdir -p "$HOME/.config"
+  link "$DIR/claude-global/settings.json"         "$HOME/.claude/settings.json"
+  link "$DIR/claude-global/settings.local.json"   "$HOME/.claude/settings.local.json"
+  link "$DIR/claude-global/CLAUDE.md"             "$HOME/.claude/CLAUDE.md"
+  link "$DIR/claude-global/rules"                 "$HOME/.claude/rules"
+  link "$DIR/claude-global/agents"                "$HOME/.claude/agents"
+  link "$DIR/claude-global/commands"              "$HOME/.claude/commands"
+  link "$DIR/claude-global/hooks"                 "$HOME/.claude/hooks"
+  link "$DIR/claude-global/sounds"                "$HOME/.claude/sounds"
+  link "$DIR/claude-global/statusline-command.sh" "$HOME/.claude/statusline-command.sh"
 
-for entry in "${LINKS[@]}"; do
-    src="${entry%%:*}"
-    dest="${entry##*:}"
+  if [ -f "$DIR/secrets.sh" ]; then
+    info "[run]  install-mcp.sh"
+    bash "$DIR/claude-global/install-mcp.sh" 2>&1 | sed 's/^/         /'
+  else
+    info "[skip] secrets.sh not found. Create it from"
+    info "       claude-global/mcp-servers.example.json, then: init claude"
+  fi
+fi
 
-    if [ ! -e "$src" ]; then
-        echo "[skip] Source not found: $src"
-        continue
+# ---------------------------------------------------------------- skills
+if [ "$TARGET" = all ] || [ "$TARGET" = skills ]; then
+  head_ "Agent skills"
+
+  if ! command -v npx >/dev/null 2>&1; then
+    info "[skip] npx not found. Install Node 20+, then: init skills"
+  else
+    # My own skills, straight out of this repo.
+    info "[add]  oxedom/dotfiles (this repo)"
+    npx -y skills@latest add oxedom/dotfiles -g -s '*' -a claude -y 2>&1 | sed 's/^/         /'
+
+    # Third-party skills, replayed from the tracked lockfile.
+    LOCK="$DIR/claude-global/skills-lock.json"
+    if [ -f "$LOCK" ] && command -v node >/dev/null 2>&1; then
+      node -e '
+        const lock = require(process.argv[1]).skills || {};
+        const bySource = {};
+        for (const [name, v] of Object.entries(lock)) {
+          if (v.source === "oxedom/dotfiles") continue;
+          (bySource[v.source] ||= []).push(name);
+        }
+        for (const [src, names] of Object.entries(bySource))
+          console.log(src + "\t" + names.join(","));
+      ' "$LOCK" | while IFS=$'\t' read -r src names; do
+        info "[add]  $src"
+        npx -y skills@latest add "$src" -g -s "$names" -a claude -y 2>&1 | sed 's/^/         /'
+      done
     fi
+  fi
+fi
 
-    if [ -L "$dest" ]; then
-        current_target="$(readlink -f "$dest")"
-        if [ "$current_target" = "$(readlink -f "$src")" ]; then
-            echo "[ok] $dest -> $src"
-            continue
-        fi
-        echo "[update] Replacing symlink $dest"
-        rm "$dest"
-    elif [ -e "$dest" ]; then
-        echo "[backup] $dest -> ${dest}.bak"
-        mv "$dest" "${dest}.bak"
-    fi
-
-    ln -s "$src" "$dest"
-    echo "[link] $dest -> $src"
-done
-
-echo ""
-echo "Done! Restart your shell or run: source ~/.bashrc"
+head_ "Done."
+echo "  Restart your shell:  exec \$SHELL -l"

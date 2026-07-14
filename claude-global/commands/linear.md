@@ -57,8 +57,8 @@ The team follows a specific workflow to ensure alignment before code implementat
 ### URL Mapping for Thoughts Documents
 When referencing thoughts documents, always provide GitHub links using the `links` parameter:
 - `thoughts/shared/...` → `https://github.com/humanlayer/thoughts/blob/main/repos/humanlayer/shared/...`
-- `thoughts/allison/...` → `https://github.com/humanlayer/thoughts/blob/main/repos/humanlayer/allison/...`
-- `thoughts/global/...` → `https://github.com/humanlayer/thoughts/blob/main/global/...`
+- `thoughts/shared/...` → `https://github.com/humanlayer/thoughts/blob/main/repos/humanlayer/allison/...`
+- `thoughts/shared/...` → `https://github.com/humanlayer/thoughts/blob/main/global/...`
 
 ### Default Values
 - **Status**: Always create new tickets in "Triage" status
@@ -217,7 +217,7 @@ When user wants to add a comment to a ticket:
    - Include relevant file references with backticks and GitHub links
 
 3. **File reference formatting:**
-   - Wrap paths in backticks: `thoughts/allison/example.md`
+   - Wrap paths in backticks: `thoughts/shared/example.md`
    - Add GitHub link after: `([View](url))`
    - Do this for both thoughts/ and code files mentioned
 

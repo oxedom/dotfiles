@@ -1,49 +1,82 @@
 # dotfiles
 
-Personal dev environment + Claude Code toolkit.
+Personal dev environment + Claude Code setup. Works on WSL, Linux, and macOS.
 
-## Setup (new machine)
+## New machine
 
 ```bash
-git clone git@github.com:oxedom/dotfiles.git ~/dotfiles
+git clone https://github.com/oxedom/dotfiles.git ~/dotfiles
 ~/dotfiles/init
-source ~/.bashrc
+exec $SHELL -l
 ```
 
-`init` will:
-- Add `source ~/dotfiles/aliases.sh` to your `~/.bashrc`
-- Symlink configs (tmux, pnpm, Xmodmap, nvim, kitty)
+`init` is idempotent and backs up anything real it would overwrite. Run a single
+section with `init shell`, `init claude`, or `init skills`.
 
-## What's in here
+It will:
 
-### Shell
-- `.bashrc` — prompt, PATH (nvm, bun, cargo, go, pnpm), `mtmux` function
-- `aliases.sh` — clipboard (`klip`), `dclaude`, `claude-toolkit`
-- `.tmux.conf` — prefix `C-a`, mouse, pane/window nav, scrollback
+1. **shell** — source `aliases.sh` from your `.bashrc`/`.zshrc`, symlink tmux, nvim,
+   pnpm (plus kitty and Xmodmap on Linux).
+2. **claude** — symlink `claude-global/` into `~/.claude`, then register MCP servers
+   if `secrets.sh` exists.
+3. **skills** — install this repo's skills globally and replay every third-party skill
+   from `claude-global/skills-lock.json`.
 
-### Claude Toolkit
+MCP servers need credentials. Create `~/dotfiles/secrets.sh` (gitignored) using
+`claude-global/mcp-servers.example.json` as the key list, then re-run `init claude`.
 
-Interactive installer that copies Claude Code agents, commands, and skills into any project's `.claude/` directory.
+## Layout
+
+```
+skills/           Agent skills. Installable by anyone (see below).
+claude-global/    Everything that becomes ~/.claude — symlinked by init.
+  settings.json     Model, hooks, statusline, marketplaces
+  CLAUDE.md         Global persona / tone
+  rules/            Always-on rules (context7)
+  agents/           6 subagents
+  commands/         20 slash commands
+  hooks/            SessionStart tmux-merge
+  sounds/           Stop-hook chime
+  skills-lock.json  Third-party skills, for reinstall on a new machine
+.config/          nvim, kitty, pnpm
+.bashrc .tmux.conf .Xmodmap aliases.sh
+keybindings.json  VS Code
+```
+
+## Skills
+
+Skills live in `skills/` and follow the [Agent Skills](https://skills.sh) convention,
+so they install with the standard CLI on any supported agent:
 
 ```bash
-cd ~/repos/some-project
-claude-toolkit          # interactive picker
-claude-toolkit --all    # install everything
-claude-toolkit --list   # see what's available
+npx skills@latest add oxedom/dotfiles           # pick interactively
+npx skills@latest add oxedom/dotfiles -g -s '*' # all of them, globally
+npx skills@latest add oxedom/dotfiles -l        # just list them
 ```
 
-Contents (in `.claude/`):
+| Skill | What it's for |
+|---|---|
+| `bootstrapping-projects` | Nothing to a named, private GitHub repo |
+| `context7-mcp` | Pull real library docs instead of guessing from training data |
+| `playwright-cli` | Drive a browser: forms, screenshots, scraping |
+| `react-best-practices` | React performance rules (rendering, bundles, async) |
+| `skill-creator` | Write new skills |
+| `small-to-before-research` | Sharpen a vague prompt before codebase research |
+| `sql-pro` | Query optimization, indexing, schema design |
+| `sticky-action-bar` | Pinned bottom action bars that survive scroll |
+| `testing` | Test strategy, stateful tests, LLM evals |
+| `tmux-merge-sessions` | Collapse duplicate tmux sessions |
+| `using-git-worktrees` | Isolated worktrees with branch conventions |
 
-| Category | Count |
-|----------|-------|
-| Agents | 8 |
-| Commands | 29 |
-| Skills | 10 |
+Third-party skills are not vendored here. They're recorded in
+`claude-global/skills-lock.json` and reinstalled from source by `init skills`
+(or `skills-sync`).
 
-### Other configs
-- `keybindings.json` — VS Code keyboard shortcuts
-- `.config/pnpm/rc` — pnpm workspace config
-- `.Xmodmap` — key remapping
+## Secrets
+
+`secrets.sh` is gitignored and must never be committed. `.gitignore` also blocks
+`*.jks`, `*.keystore`, and `.env`. Keystores and signing keys belong in a password
+manager, not here.
 
 ## Snippets
 
