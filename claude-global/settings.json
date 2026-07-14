@@ -1,4 +1,5 @@
 {
+  "model": "opus[1m]",
   "enabledPlugins": {},
   "extraKnownMarketplaces": {
     "superpowers-marketplace": {
@@ -8,6 +9,7 @@
       }
     }
   },
+  "tui": "fullscreen",
   "voice": {
     "enabled": true,
     "mode": "hold"
@@ -17,6 +19,5 @@
   "preferredNotifChannel": "iterm2",
   "autoCompactEnabled": false,
   "agentPushNotifEnabled": true,
-  "voiceEnabled": true,
-  "tui": "fullscreen"
+  "voiceEnabled": true
 }
