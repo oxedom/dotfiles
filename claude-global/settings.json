@@ -1,5 +1,5 @@
 {
-  "model": "claude-fable-5[1m]",
+  "model": "opus[1m]",
   "hooks": {
     "SessionStart": [
       {
@@ -12,12 +12,39 @@
         ]
       }
     ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/claude-tab-state.sh working",
+            "async": true
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
             "command": "if [ -f ~/.claude/sounds/finish.mp3 ]; then cvlc --play-and-exit --quiet ~/.claude/sounds/finish.mp3 2>/dev/null || true; else paplay /usr/share/sounds/sound-icons/piano-3.wav 2>/dev/null || true; fi",
+            "async": true
+          },
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/claude-tab-state.sh done",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/claude-tab-state.sh reset",
             "async": true
           }
         ]

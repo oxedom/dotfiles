@@ -96,3 +96,11 @@ case ":$PATH:" in
   *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
 
+# Global npm bins live under the pnpm-managed node, which isn't on PATH by default.
+export PATH="$PNPM_HOME/nodejs_current/bin:$PATH"
+
+# Windows nvm4w leaks into WSL via PATH interop. Its npm packages carry win32
+# binaries, so Linux node picks them up and fails on the missing native dep.
+PATH="$(printf '%s' "$PATH" | tr ':' '\n' | grep -vx '/mnt/c/nvm4w/nodejs' | paste -sd:)"
+export PATH
+
