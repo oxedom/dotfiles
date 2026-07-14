@@ -1,0 +1,22 @@
+{
+  "enabledPlugins": {},
+  "extraKnownMarketplaces": {
+    "superpowers-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "obra/superpowers-marketplace"
+      }
+    }
+  },
+  "voice": {
+    "enabled": true,
+    "mode": "hold"
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "verbose": true,
+  "preferredNotifChannel": "iterm2",
+  "autoCompactEnabled": false,
+  "agentPushNotifEnabled": true,
+  "voiceEnabled": true,
+  "tui": "fullscreen"
+}
