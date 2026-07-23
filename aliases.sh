@@ -14,3 +14,4 @@ alias dclaude="claude --dangerously-skip-permissions"
 
 # Reinstall/refresh agent skills from the tracked lockfile.
 alias skills-sync="$HOME/dotfiles/init skills"
+alias agent-sync="$HOME/dotfiles/sync-agent-resources"

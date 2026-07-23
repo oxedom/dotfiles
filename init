@@ -116,5 +116,15 @@ if [ "$TARGET" = all ] || [ "$TARGET" = skills ]; then
   fi
 fi
 
+# ---------------------------------------------------------------- bridge
+if [ "$TARGET" = all ] || [ "$TARGET" = claude ] || [ "$TARGET" = skills ]; then
+  head_ "Claude/Codex resource bridge"
+  if [ -x "$DIR/sync-agent-resources" ]; then
+    "$DIR/sync-agent-resources" --global
+  else
+    info "[skip] sync-agent-resources is missing or not executable"
+  fi
+fi
+
 head_ "Done."
 echo "  Restart your shell:  exec \$SHELL -l"

@@ -1,6 +1,7 @@
 # dotfiles
 
-Personal dev environment + Claude Code setup. Works on WSL, Linux, and macOS.
+Personal dev environment + shared Claude Code/Codex setup. Works on WSL, Linux,
+and macOS.
 
 ## New machine
 
@@ -22,6 +23,8 @@ It will:
    if `secrets.sh` exists.
 3. **skills** — install this repo's skills globally and replay every third-party skill
    from `claude-global/skills-lock.json`.
+4. **bridge** — expose Claude skills, commands, subagents, and compatible global
+   imports through Codex's native discovery paths.
 
 MCP servers need credentials. Create `~/dotfiles/secrets.sh` (gitignored) using
 `claude-global/mcp-servers.example.json` as the key list, then re-run `init claude`.
@@ -69,6 +72,26 @@ npx skills@latest add oxedom/dotfiles -l        # just list them
 | `tmux-merge-sessions` | Collapse duplicate tmux sessions |
 | `using-git-worktrees` | Isolated worktrees with branch conventions |
 
+## Claude/Codex bridge
+
+The reusable sources live in `skills/` and `claude-global/`.
+`sync-agent-resources` uses symlinks for portable Agent Skills and thin generated
+adapters where the Claude and Codex formats differ.
+
+```bash
+agent-sync             # sync global Claude resources into Codex
+agent-sync --check     # audit without changing anything
+
+agent-sync --project /path/to/repo
+```
+
+- `.agents/skills/<name>` symlinks for Codex skill discovery
+- `.agents/skills/<command>/SKILL.md` adapters for Claude legacy commands
+- `.codex/agents/<name>.toml` adapters for Claude subagents
+- `AGENTS.md -> CLAUDE.md` when the project does not already have `AGENTS.md`
+
+Existing hand-written Codex files are never overwritten.
+
 Third-party skills are not vendored here. They're recorded in
 `claude-global/skills-lock.json` and reinstalled from source by `init skills`
 (or `skills-sync`).
@@ -78,6 +101,9 @@ Third-party skills are not vendored here. They're recorded in
 `secrets.sh` is gitignored and must never be committed. `.gitignore` also blocks
 `*.jks`, `*.keystore`, and `.env`. Keystores and signing keys belong in a password
 manager, not here.
+
+See [AGENT-COMPATIBILITY.md](AGENT-COMPATIBILITY.md) for the exact compatibility
+boundaries and maintenance model.
 
 ## Snippets
 
