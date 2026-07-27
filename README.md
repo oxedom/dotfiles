@@ -15,9 +15,9 @@ section with `init shell`, `init claude`, or `init skills`.
 
 It will:
 
-1. **shell** — symlink `.bashrc` (which sources `aliases.sh`), tmux, nvim and pnpm,
-   plus kitty and Xmodmap on Linux. On macOS it appends the alias source line to
-   `.zshrc` instead.
+1. **shell** — symlink `.bashrc` (which sources `aliases.sh`), tmux, nvim, pnpm and
+   herdr, plus kitty and Xmodmap on Linux. On macOS it appends the alias source line
+   to `.zshrc` instead.
 2. **claude** — symlink `claude-global/` into `~/.claude`, then register MCP servers
    if `secrets.sh` exists.
 3. **skills** — install this repo's skills globally and replay every third-party skill
@@ -36,13 +36,64 @@ claude-global/    Everything that becomes ~/.claude — symlinked by init.
   rules/            Always-on rules (context7)
   agents/           6 subagents
   commands/         20 slash commands
-  hooks/            SessionStart tmux-merge
-  sounds/           Stop-hook chime
+  hooks/            herdr agent-state (managed by `herdr integration install claude`)
+  sounds/           finish.mp3 — also linked to ~/.config/herdr/sounds
   skills-lock.json  Third-party skills, for reinstall on a new machine
-.config/          nvim, kitty, pnpm
+.config/          herdr, nvim, kitty, pnpm
 .bashrc .tmux.conf .Xmodmap aliases.sh
 keybindings.json  VS Code
 ```
+
+## herdr
+
+[herdr](https://herdr.dev) replaced tmux as the agent multiplexer. Config lives at
+`.config/herdr/config.toml` and is symlinked by `init shell`; only the file is
+linked, because herdr keeps its sockets, logs and `session.json` in that directory.
+
+Prefix is `ctrl+a` to match the old tmux binding. `prefix+?` lists every key.
+Non-default bindings worth remembering:
+
+| Key | Action |
+|---|---|
+| `prefix+alt+1..9` | Focus agent N in the sidebar |
+| `prefix+shift+1..9` | Switch workspace |
+| `prefix+shift+←/→` | Previous / next workspace |
+| `prefix+space` | Last pane |
+| `prefix+shift+g` | New git worktree **and** a workspace for it |
+| `prefix+alt+g` | git graph popup |
+| `prefix+alt+p` | open PRs popup |
+
+Claude Code reports session identity through `claude-global/hooks/herdr-agent-state.sh`,
+installed and updated by `herdr integration install claude`. That hook is what makes
+agent panes resume their conversations after a server restart — don't hand-edit it.
+Check it with `herdr integration status`.
+
+After editing `config.toml`: `herdr config check`, then `herdr server reload-config`
+(or `prefix+shift+r`).
+
+### Remote machines
+
+Install herdr and these dotfiles on the remote box, then attach to it from the
+local terminal — no manual `ssh` first:
+
+```bash
+# on the remote, once
+curl -fsSL https://herdr.dev/install.sh | sh
+git clone https://github.com/oxedom/dotfiles.git ~/dotfiles && ~/dotfiles/init
+
+# on the laptop, every time
+herdr --remote workbox                    # host from ~/.ssh/config
+herdr --remote workbox --session review    # named session
+```
+
+Attaching this way rather than `ssh` + `herdr` gets you local keybindings
+(`--remote-keybindings local`, the default), image paste into Claude, a reused
+authenticated SSH connection, and `ServerAliveInterval` layered on top of
+`~/.ssh/config` so an idle NAT timeout doesn't kill the session. `[remote]
+manage_ssh_config = false` opts out of the generated ssh config.
+
+The remote server keeps running when the laptop disconnects. Reattach with the
+same command; `herdr update --handoff` upgrades without dropping panes.
 
 ## Skills
 

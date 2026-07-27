@@ -55,6 +55,15 @@ if [ "$TARGET" = all ] || [ "$TARGET" = shell ]; then
   link "$DIR/.config/nvim" "$HOME/.config/nvim"
   link "$DIR/.config/pnpm" "$HOME/.config/pnpm"
 
+  # herdr keeps sockets, logs and session.json in this directory, so link the
+  # config file itself rather than the directory.
+  link "$DIR/.config/herdr/config.toml" "$HOME/.config/herdr/config.toml"
+
+  # herdr resolves relative sound paths against ~/.config/herdr, not against the
+  # symlink target in this repo, so the sounds directory has to be linked too.
+  # Shared with ~/.claude/sounds rather than duplicating the mp3.
+  link "$DIR/claude-global/sounds" "$HOME/.config/herdr/sounds"
+
   # Linux/WSL only — macOS has no X11, and kitty config lives elsewhere.
   if [ "$(uname -s)" != "Darwin" ]; then
     link "$DIR/.Xmodmap"      "$HOME/.Xmodmap"
