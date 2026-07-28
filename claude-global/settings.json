@@ -74,5 +74,6 @@
   "preferredNotifChannel": "iterm2",
   "autoCompactEnabled": false,
   "agentPushNotifEnabled": true,
-  "voiceEnabled": true
+  "voiceEnabled": true,
+  "autoMemoryEnabled": false
 }
