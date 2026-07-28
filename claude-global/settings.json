@@ -37,4 +37,11 @@
     "mode": "hold"
   },
   "voiceEnabled": true
+  "skipDangerousModePermissionPrompt": true,
+  "verbose": true,
+  "preferredNotifChannel": "iterm2",
+  "autoCompactEnabled": false,
+  "agentPushNotifEnabled": true,
+  "voiceEnabled": true,
+  "autoMemoryEnabled": false
 }
