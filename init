@@ -4,6 +4,7 @@
 #
 #   ~/dotfiles/init            # everything
 #   ~/dotfiles/init shell      # shell + editor configs only
+#   ~/dotfiles/init gnome      # GNOME desktop settings only
 #   ~/dotfiles/init claude     # ~/.claude config only
 #   ~/dotfiles/init skills     # reinstall agent skills from the lockfile
 #
@@ -68,6 +69,39 @@ if [ "$TARGET" = all ] || [ "$TARGET" = shell ]; then
   if [ "$(uname -s)" != "Darwin" ]; then
     link "$DIR/.Xmodmap"      "$HOME/.Xmodmap"
     link "$DIR/.config/kitty" "$HOME/.config/kitty"
+  fi
+fi
+
+# ---------------------------------------------------------------- gnome
+if [ "$TARGET" = all ] || [ "$TARGET" = gnome ]; then
+  head_ "GNOME desktop settings"
+
+  if ! command -v gsettings >/dev/null 2>&1; then
+    info "[skip] gsettings not found (not a GNOME machine)"
+  else
+    # set <schema> <key> <value> — write only when it differs, so re-runs are quiet.
+    set_() {
+      local schema="$1" key="$2" want="$3" have
+      have="$(gsettings get "$schema" "$key" 2>/dev/null)" || {
+        info "[skip] no such key: $schema $key"; return; }
+      [ "$have" = "$want" ] && { info "[ok]   $key = $want"; return; }
+      gsettings set "$schema" "$key" "$want" && info "[set]  $key: $have -> $want"
+    }
+
+    # Never dim or blank the display. gsd-power dims on idle even when blanking
+    # and suspend are off, so idle-dim is the one that actually matters here.
+    P=org.gnome.settings-daemon.plugins.power
+    set_ "$P" idle-dim                    false
+    set_ "$P" sleep-inactive-ac-type      "'nothing'"
+    set_ "$P" sleep-inactive-battery-type "'nothing'"
+
+    # Auto-brightness from an ambient light sensor. This ThinkPad has no sensor
+    # (/sys/bus/iio/devices is empty), but other machines do — off everywhere.
+    set_ "$P" ambient-enabled false
+
+    # idle-delay 0 = never blank. Locking still works via the keybinding.
+    set_ org.gnome.desktop.session    idle-delay "uint32 0"
+    set_ org.gnome.desktop.screensaver idle-activation-enabled false
   fi
 fi
 
