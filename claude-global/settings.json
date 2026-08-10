@@ -1,6 +1,7 @@
 {
   "agentPushNotifEnabled": true,
   "autoCompactEnabled": false,
+  "autoMemoryEnabled": false,
   "enabledPlugins": {},
   "extraKnownMarketplaces": {
     "superpowers-marketplace": {
@@ -22,9 +23,20 @@
         ],
         "matcher": "*"
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "async": true,
+            "command": "if [ -f ~/.claude/sounds/pop.ogg ]; then paplay ~/.claude/sounds/pop.ogg 2>/dev/null || true; else paplay /usr/share/sounds/sound-icons/piano-3.wav 2>/dev/null || true; fi",
+            "type": "command"
+          }
+        ]
+      }
     ]
   },
-  "preferredNotifChannel": "auto",
+  "preferredNotifChannel": "iterm2",
   "skipDangerousModePermissionPrompt": true,
   "statusLine": {
     "command": "bash ~/.claude/statusline-command.sh",
@@ -37,11 +49,4 @@
     "mode": "hold"
   },
   "voiceEnabled": true
-  "skipDangerousModePermissionPrompt": true,
-  "verbose": true,
-  "preferredNotifChannel": "iterm2",
-  "autoCompactEnabled": false,
-  "agentPushNotifEnabled": true,
-  "voiceEnabled": true,
-  "autoMemoryEnabled": false
 }
