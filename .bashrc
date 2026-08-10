@@ -104,3 +104,7 @@ export PATH="$PNPM_HOME/nodejs_current/bin:$PATH"
 PATH="$(printf '%s' "$PATH" | tr ':' '\n' | grep -vx '/mnt/c/nvm4w/nodejs' | paste -sd:)"
 export PATH
 
+# Optional machine-local limits for pnpm dev:all. The local file supplies the
+# target Git directory and sources shell/pnpm-dev-guard.bash.
+[ -r "$HOME/.config/pnpm-dev-guard.local.bash" ] && \
+  . "$HOME/.config/pnpm-dev-guard.local.bash"

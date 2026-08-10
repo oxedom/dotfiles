@@ -47,6 +47,25 @@ claude-global/    Everything that becomes ~/.claude — symlinked by init.
 keybindings.json  VS Code
 ```
 
+## Optional pnpm dev guard
+
+The Bash config can opt one local Git repository into a singleton
+`pnpm dev:all` scope with systemd memory limits. It is disabled unless the
+machine has `~/.config/pnpm-dev-guard.local.bash`.
+
+```bash
+PNPM_DEV_GUARD_COMMON_GIT_DIR="$HOME/path/to/project/.git"
+PNPM_DEV_GUARD_UNIT=project-dev
+PNPM_DEV_GUARD_MEMORY_HIGH=3G
+PNPM_DEV_GUARD_MEMORY_MAX=4G
+
+. "$HOME/dotfiles/shell/pnpm-dev-guard.bash"
+```
+
+Keep that file local so project paths and machine-specific limits are not
+committed. The guard intercepts only the exact commands `pnpm dev:all` and
+`pnpm run dev:all` in the configured repository and its linked worktrees.
+
 ## herdr
 
 [herdr](https://herdr.dev) replaced tmux as the agent multiplexer. Config lives at
