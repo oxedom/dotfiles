@@ -111,14 +111,10 @@ npx skills@latest add oxedom/dotfiles -l        # just list them
 
 | Skill | What it's for |
 |---|---|
-| `bootstrapping-projects` | Nothing to a named, private GitHub repo |
 | `context7-mcp` | Pull real library docs instead of guessing from training data |
 | `playwright-cli` | Drive a browser: forms, screenshots, scraping |
 | `react-best-practices` | React performance rules (rendering, bundles, async) |
 | `skill-creator` | Write new skills |
-| `small-to-before-research` | Sharpen a vague prompt before codebase research |
-| `sql-pro` | Query optimization, indexing, schema design |
-| `sticky-action-bar` | Pinned bottom action bars that survive scroll |
 | `testing` | Test strategy, stateful tests, LLM evals |
 | `tmux-merge-sessions` | Collapse duplicate tmux sessions |
 | `using-git-worktrees` | Isolated worktrees with branch conventions |
