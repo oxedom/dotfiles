@@ -136,6 +136,7 @@ agent-sync --project /path/to/repo
 - `.agents/skills/<command>/SKILL.md` adapters for Claude legacy commands
 - `.codex/agents/<name>.toml` adapters for Claude subagents
 - `AGENTS.md -> CLAUDE.md` when the project does not already have `AGENTS.md`
+- compatible skills, commands, and subagents from enabled user-level Claude plugins
 
 Existing hand-written Codex files are never overwritten.
 

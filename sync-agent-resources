@@ -207,6 +207,7 @@ def sync_skills(
     report: Report,
     check: bool,
     extra_sources: list[Path] | None = None,
+    metadata_adapters: bool = False,
 ) -> None:
     reserved = discover_skill_names(codex_skills)
     if codex_legacy_skills:
@@ -228,8 +229,73 @@ def sync_skills(
         metadata, _ = parse_frontmatter(skill_file)
         declared_name = normalized_skill_name(metadata.get("name", source.name))
         destination = codex_skills / source.name
+        description = metadata.get("description", f"Use the shared {declared_name} skill.")
+
+        if metadata_adapters and ("<" in description or ">" in description):
+            relative_source = os.path.relpath(skill_file, destination)
+            compatible_description = description.replace("<", "").replace(">", "")
+            content = f"""---
+name: {declared_name}
+description: {json.dumps(compatible_description, ensure_ascii=False)}
+---
+
+{GENERATED_MARKER}
+# Adapter type: skill metadata compatibility
+
+Read and follow the authoritative shared skill at
+[`SKILL.md`]({relative_source}).
+"""
+            if destination.is_symlink():
+                if same_target(destination, source):
+                    report.change(
+                        f"Codex skill: replace with metadata adapter {destination}",
+                        check,
+                    )
+                    if not check:
+                        destination.unlink()
+                else:
+                    report.warnings.append(
+                        f"Codex skill: kept existing symlink {destination}"
+                    )
+                    continue
+            write_generated(
+                destination / "SKILL.md",
+                content,
+                report,
+                check,
+                "Codex skill metadata adapter",
+            )
+            reserved.setdefault(declared_name, destination)
+            continue
+
+        generated_skill = destination / "SKILL.md"
+        if (
+            metadata_adapters
+            and
+            generated_skill.is_file()
+            and "# Adapter type: skill metadata compatibility"
+            in generated_skill.read_text(encoding="utf-8")[:500]
+        ):
+            remove_generated(
+                generated_skill,
+                report,
+                check,
+                "Codex skill metadata adapter",
+                remove_empty_parent=True,
+            )
+            if check:
+                continue
 
         if destination.exists() or destination.is_symlink():
+            if (
+                declared_name in reserved
+                and not same_target(destination, source)
+            ):
+                report.current.append(
+                    f"Codex skill: {declared_name} already provided by "
+                    f"{reserved[declared_name]}"
+                )
+                continue
             ensure_symlink(source, destination, report, check, "Codex skill")
             reserved.setdefault(declared_name, destination)
             continue
@@ -273,6 +339,88 @@ def imported_skill_sources(instruction_file: Path, report: Report) -> list[Path]
     return sources
 
 
+def enabled_user_plugin_roots(claude_home: Path, report: Report) -> list[Path]:
+    """Return installed roots for enabled user-scoped Claude plugins.
+
+    Claude keeps plugin components outside ~/.claude/skills, commands, and agents.
+    Treat the installed plugin record as the source of truth so cached superseded
+    versions and project-scoped plugins are not accidentally made global.
+    """
+    settings_path = claude_home / "settings.json"
+    installed_path = claude_home / "plugins" / "installed_plugins.json"
+    if not settings_path.exists() or not installed_path.exists():
+        return []
+
+    try:
+        settings = json.loads(settings_path.read_text(encoding="utf-8"))
+        installed = json.loads(installed_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        report.warnings.append(f"Claude plugins: could not read metadata: {error}")
+        return []
+
+    enabled = settings.get("enabledPlugins", {})
+    plugin_records = installed.get("plugins", installed)
+    if not isinstance(enabled, dict) or not isinstance(plugin_records, dict):
+        report.warnings.append("Claude plugins: unrecognized metadata shape")
+        return []
+
+    roots: list[Path] = []
+    for plugin_id in sorted(name for name, value in enabled.items() if value is True):
+        records = plugin_records.get(plugin_id, [])
+        if not isinstance(records, list):
+            continue
+        user_records = [
+            record
+            for record in records
+            if isinstance(record, dict)
+            and record.get("scope") == "user"
+            and isinstance(record.get("installPath"), str)
+        ]
+        if not user_records:
+            continue
+        record = max(
+            user_records,
+            key=lambda item: str(item.get("lastUpdated") or item.get("installedAt") or ""),
+        )
+        root = Path(record["installPath"]).expanduser()
+        if root.is_dir():
+            roots.append(root)
+        else:
+            report.warnings.append(
+                f"Claude plugin: enabled {plugin_id} is missing at {root}"
+            )
+    return roots
+
+
+def remove_inactive_plugin_skill_links(
+    codex_skills: Path,
+    plugin_cache: Path,
+    plugin_roots: list[Path],
+    report: Report,
+    check: bool,
+) -> None:
+    """Remove only symlinks previously sourced from inactive Claude plugin caches."""
+    if not codex_skills.exists():
+        return
+
+    active_targets = {
+        skill_file.parent.resolve(strict=False)
+        for plugin_root in plugin_roots
+        for skill_file in (plugin_root / "skills").glob("*/SKILL.md")
+    }
+    cache_root = plugin_cache.resolve(strict=False)
+    for destination in codex_skills.iterdir():
+        if not destination.is_symlink():
+            continue
+        target = destination.resolve(strict=False)
+        if target.is_relative_to(cache_root) and target not in active_targets:
+            report.change(
+                f"Codex plugin skill: remove inactive {destination}", check
+            )
+            if not check:
+                destination.unlink()
+
+
 def command_wrapper(source: Path, destination: Path) -> tuple[str, str]:
     metadata, body = parse_frontmatter(source)
     name = normalized_skill_name(metadata.get("name", source.stem))
@@ -284,6 +432,7 @@ description: {description}
 ---
 
 {GENERATED_MARKER}
+# Adapter type: command
 
 Read and follow the authoritative shared command at
 [`{source.name}`]({relative_source}).
@@ -302,22 +451,34 @@ Compatibility notes:
 
 
 def sync_commands(
-    source_root: Path,
+    source_roots: Path | list[Path],
     codex_skills: Path,
     report: Report,
     check: bool,
 ) -> None:
     expected: set[Path] = set()
-    sources = (
-        sorted(path for path in source_root.glob("*.md") if path.is_file())
+    if isinstance(source_roots, Path):
+        source_roots = [source_roots]
+    sources = [
+        path
+        for source_root in source_roots
         if source_root.exists()
-        else []
-    )
+        for path in sorted(source_root.glob("*.md"))
+        if path.is_file() and path.name.lower() != "readme.md"
+    ]
+    seen: dict[str, Path] = {}
     for source in sources:
-        name = normalized_skill_name(source.stem)
+        metadata, _ = parse_frontmatter(source)
+        name = normalized_skill_name(metadata.get("name", source.stem))
         if not name:
             report.warnings.append(f"command: skipped invalid name {source.name!r}")
             continue
+        if name in seen:
+            report.warnings.append(
+                f"command: kept {seen[name]} and skipped conflicting {source}"
+            )
+            continue
+        seen[name] = source
         destination = codex_skills / name / "SKILL.md"
         expected.add(destination)
         _, content = command_wrapper(source, destination)
@@ -327,7 +488,11 @@ def sync_commands(
         for destination in codex_skills.glob("*/SKILL.md"):
             if destination in expected or not destination.is_file():
                 continue
-            if GENERATED_MARKER in destination.read_text(encoding="utf-8")[:500]:
+            existing = destination.read_text(encoding="utf-8")[:500]
+            if GENERATED_MARKER in existing and (
+                "# Adapter type: command" in existing
+                or "# Adapter type: skill metadata compatibility" not in existing
+            ):
                 remove_generated(
                     destination,
                     report,
@@ -371,22 +536,33 @@ def agent_adapter(source: Path) -> tuple[str, str]:
 
 
 def sync_agents(
-    source_root: Path,
+    source_roots: Path | list[Path],
     codex_agents: Path,
     report: Report,
     check: bool,
 ) -> None:
     expected: set[Path] = set()
-    sources = (
-        sorted(path for path in source_root.glob("*.md") if path.is_file())
+    if isinstance(source_roots, Path):
+        source_roots = [source_roots]
+    sources = [
+        path
+        for source_root in source_roots
         if source_root.exists()
-        else []
-    )
+        for path in sorted(source_root.glob("*.md"))
+        if path.is_file() and path.name.lower() != "readme.md"
+    ]
+    seen: dict[str, Path] = {}
     for source in sources:
         name, content = agent_adapter(source)
         if not name:
             report.warnings.append(f"agent: skipped invalid name {source.name!r}")
             continue
+        if name in seen:
+            report.warnings.append(
+                f"agent: kept {seen[name]} and skipped conflicting {source}"
+            )
+            continue
+        seen[name] = source
         destination = codex_agents / f"{name}.toml"
         expected.add(destination)
         write_generated(
@@ -491,6 +667,14 @@ def main() -> int:
         sync_project_instruction(project, report, args.check)
     else:
         claude_home = home / ".claude"
+        plugin_roots = enabled_user_plugin_roots(claude_home, report)
+        remove_inactive_plugin_skill_links(
+            home / ".agents" / "skills",
+            claude_home / "plugins" / "cache",
+            plugin_roots,
+            report,
+            args.check,
+        )
         expose_catalog_to_claude(dotfiles_root, claude_home, report, args.check)
         expose_catalog_to_claude(
             dotfiles_root / "claude-global", claude_home, report, args.check
@@ -505,14 +689,25 @@ def main() -> int:
                 claude_home / "CLAUDE.md", report
             ),
         )
+        for plugin_root in plugin_roots:
+            sync_skills(
+                plugin_root / "skills",
+                home / ".agents" / "skills",
+                home / ".codex" / "skills",
+                report,
+                args.check,
+                metadata_adapters=True,
+            )
         sync_commands(
-            claude_home / "commands",
+            [claude_home / "commands"]
+            + [plugin_root / "commands" for plugin_root in plugin_roots],
             home / ".agents" / "skills",
             report,
             args.check,
         )
         sync_agents(
-            claude_home / "agents",
+            [claude_home / "agents"]
+            + [plugin_root / "agents" for plugin_root in plugin_roots],
             home / ".codex" / "agents",
             report,
             args.check,

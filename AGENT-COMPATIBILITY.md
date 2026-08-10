@@ -14,6 +14,9 @@ their symlinks immediately.
 | Project instructions | `CLAUDE.md` | `AGENTS.md` | File symlink when no `AGENTS.md` exists |
 | Legacy commands | `claude-global/commands/<name>.md` | `.agents/skills/<name>/SKILL.md` | Thin skill adapter that reads the source command |
 | Custom subagents | `claude-global/agents/<name>.md` | `.codex/agents/<name>.toml` | Thin TOML adapter that reads the source agent |
+| Enabled user plugin skills | Plugin `skills/<name>/SKILL.md` | `.agents/skills/<name>/SKILL.md` | Symlinked from the active installed plugin |
+| Enabled user plugin commands | Plugin `commands/<name>.md` | `.agents/skills/<name>/SKILL.md` | Thin skill adapter that reads the source command |
+| Enabled user plugin subagents | Plugin `agents/<name>.md` | `.codex/agents/<name>.toml` | Thin TOML adapter that reads the source agent |
 
 Both products support the open Agent Skills format and both follow symlinked
 skill folders. This is the high-fidelity part of the bridge.
@@ -34,7 +37,9 @@ skill folders. This is the high-fidelity part of the bridge.
 - Claude hooks and Codex hooks have different lifecycle events and enforcement
   behavior. They should be ported and tested individually, not linked.
 - Claude marketplaces/plugins and Codex plugins have separate installation and
-  authorization state. Plugin-bundled skills are not automatically projected.
+  authorization state. The sync projects compatible resources from enabled,
+  user-scoped Claude plugins, but plugin hooks, MCP servers, apps, LSP servers,
+  install state, and authorization still need native Codex setup.
 - Claude's general `@path` import syntax is not a portable `AGENTS.md` feature.
   The sync script recognizes top-level global imports that point directly to a
   `SKILL.md` and exposes those as Codex skills; other imports still need a
