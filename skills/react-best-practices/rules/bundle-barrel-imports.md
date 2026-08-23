@@ -37,6 +37,13 @@ import TextField from '@mui/material/TextField'
 // Loads only what you use
 ```
 
+> **TypeScript warning:** Some libraries (notably `lucide-react`) don't ship `.d.ts` files for their deep
+> import paths. Importing from `lucide-react/dist/esm/icons/check` resolves to an implicit `any`, causing
+> errors under `strict` or `noImplicitAny`. Verify the library exports types for its subpaths before
+> switching, or check whether your bundler can rewrite barrel imports for you — Vite's
+> `optimizeDeps`/`rollupOptions` and Webpack's `babel-plugin-import` both do this while preserving
+> the standard import syntax and its type safety.
+
 Direct imports provide 15-70% faster dev boot, 28% faster builds, 40% faster cold starts, and significantly faster HMR.
 
 Libraries commonly affected: `lucide-react`, `@mui/material`, `@mui/icons-material`, `@tabler/icons-react`, `react-icons`, `@headlessui/react`, `@radix-ui/react-*`, `lodash`, `ramda`, `date-fns`, `rxjs`, `react-use`.

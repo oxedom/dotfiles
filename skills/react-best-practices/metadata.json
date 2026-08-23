@@ -1,11 +1,12 @@
 {
-  "version": "1.0.0",
-  "date": "January 2026",
-  "abstract": "Comprehensive performance optimization guide for React applications, designed for AI agents and LLMs. Contains 40+ rules across 8 categories, prioritized by impact from critical (eliminating waterfalls, reducing bundle size) to incremental (advanced patterns). Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated refactoring and code generation.",
+  "version": "1.1.0",
+  "date": "August 2026",
+  "abstract": "Comprehensive performance optimization guide for client-side React applications, designed for AI agents and LLMs. Contains 56 rules across 7 categories, prioritized by impact from critical (eliminating waterfalls, reducing bundle size) to incremental (advanced patterns). Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated refactoring and code generation. Server-rendering, RSC, and Next.js-specific guidance is intentionally excluded.",
   "references": [
     "https://react.dev",
     "https://swr.vercel.app",
     "https://github.com/shuding/better-all",
-    "https://github.com/isaacs/node-lru-cache"
+    "https://vite.dev/guide/features.html",
+    "https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script"
   ]
 }

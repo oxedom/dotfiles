@@ -2,38 +2,36 @@
 
 A structured repository for creating and maintaining React Best Practices optimized for agents and LLMs.
 
+Adapted from [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills/tree/main/skills/react-best-practices).
+This fork covers **client-side React only** — Next.js-specific rules (`server-*`,
+`async-api-routes`), SSR/hydration rules (`rendering-hydration-*`,
+`rendering-resource-hints`), and framework-specific examples have been removed or
+rewritten framework-neutral.
+
 ## Structure
 
 - `rules/` - Individual rule files (one per rule)
   - `_sections.md` - Section metadata (titles, impacts, descriptions)
   - `_template.md` - Template for creating new rules
   - `area-description.md` - Individual rule files
-- `src/` - Build scripts and utilities
-- `metadata.json` - Document metadata (version, organization, abstract)
+- `build.py` - Compiles `rules/` into `AGENTS.md`
+- `metadata.json` - Document metadata (version, date, abstract, references)
+- `SKILL.md` - Skill entry point (quick reference index)
 - __`AGENTS.md`__ - Compiled output (generated)
-- __`test-cases.json`__ - Test cases for LLM evaluation (generated)
 
 ## Getting Started
 
-1. Install dependencies:
-   ```bash
-   pnpm install
-   ```
+Build AGENTS.md from rules (no dependencies beyond Python 3):
 
-2. Build AGENTS.md from rules:
-   ```bash
-   pnpm build
-   ```
+```bash
+python3 build.py
+```
 
-3. Validate rule files:
-   ```bash
-   pnpm validate
-   ```
+Verify AGENTS.md is in sync with `rules/`:
 
-4. Extract test cases:
-   ```bash
-   pnpm extract-tests
-   ```
+```bash
+python3 build.py --check
+```
 
 ## Creating a New Rule
 
@@ -48,7 +46,7 @@ A structured repository for creating and maintaining React Best Practices optimi
    - `advanced-` for Advanced Patterns (Section 7)
 3. Fill in the frontmatter and content
 4. Ensure you have clear examples with explanations
-5. Run `pnpm build` to regenerate AGENTS.md and test-cases.json
+5. Run `python3 build.py` to regenerate AGENTS.md
 
 ## Rule File Structure
 
@@ -101,10 +99,8 @@ Reference: [Link](https://example.com)
 
 ## Scripts
 
-- `pnpm build` - Compile rules into AGENTS.md
-- `pnpm validate` - Validate all rule files
-- `pnpm extract-tests` - Extract test cases for LLM evaluation
-- `pnpm dev` - Build and validate
+- `python3 build.py` - Compile rules into AGENTS.md
+- `python3 build.py --check` - Fail if AGENTS.md is out of date
 
 ## Contributing
 
@@ -114,7 +110,7 @@ When adding or modifying rules:
 2. Follow the `_template.md` structure
 3. Include clear bad/good examples with explanations
 4. Add appropriate tags
-5. Run `pnpm build` to regenerate AGENTS.md and test-cases.json
+5. Run `python3 build.py` to regenerate AGENTS.md
 6. Rules are automatically sorted by title - no need to manage numbers!
 
 ## Acknowledgments

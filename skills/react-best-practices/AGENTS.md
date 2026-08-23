@@ -1,7 +1,7 @@
 # React Best Practices
 
-**Version 1.0.0**
-January 2026
+**Version 1.1.0**
+August 2026
 
 > **Note:**
 > This document is mainly for agents and LLMs to follow when maintaining,
@@ -12,16 +12,16 @@ January 2026
 
 ## Abstract
 
-Comprehensive performance optimization guide for React applications, designed for AI agents and LLMs. Contains 40+ rules across 8 categories, prioritized by impact from critical (eliminating waterfalls, reducing bundle size) to incremental (advanced patterns). Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated refactoring and code generation.
+Comprehensive performance optimization guide for client-side React applications, designed for AI agents and LLMs. Contains 56 rules across 7 categories, prioritized by impact from critical (eliminating waterfalls, reducing bundle size) to incremental (advanced patterns). Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated refactoring and code generation. Server-rendering, RSC, and Next.js-specific guidance is intentionally excluded.
 
 ---
 
 ## Table of Contents
 
 1. [Eliminating Waterfalls](#1-eliminating-waterfalls) — **CRITICAL**
-   - 1.1 [Defer Await Until Needed](#11-defer-await-until-needed)
-   - 1.2 [Dependency-Based Parallelization](#12-dependency-based-parallelization)
-   - 1.3 [Prevent Waterfall Chains in API Routes](#13-prevent-waterfall-chains-in-api-routes)
+   - 1.1 [Check Cheap Conditions Before Async Flags](#11-check-cheap-conditions-before-async-flags)
+   - 1.2 [Defer Await Until Needed](#12-defer-await-until-needed)
+   - 1.3 [Dependency-Based Parallelization](#13-dependency-based-parallelization)
    - 1.4 [Promise.all() for Independent Operations](#14-promiseall-for-independent-operations)
    - 1.5 [Strategic Suspense Boundaries](#15-strategic-suspense-boundaries)
 2. [Bundle Size Optimization](#2-bundle-size-optimization) — **CRITICAL**
@@ -29,43 +29,58 @@ Comprehensive performance optimization guide for React applications, designed fo
    - 2.2 [Conditional Module Loading](#22-conditional-module-loading)
    - 2.3 [Defer Non-Critical Third-Party Libraries](#23-defer-non-critical-third-party-libraries)
    - 2.4 [Dynamic Imports for Heavy Components](#24-dynamic-imports-for-heavy-components)
-   - 2.5 [Preload Based on User Intent](#25-preload-based-on-user-intent)
+   - 2.5 [Prefer Statically Analyzable Paths](#25-prefer-statically-analyzable-paths)
+   - 2.6 [Preload Based on User Intent](#26-preload-based-on-user-intent)
 3. [Client-Side Data Fetching](#3-client-side-data-fetching) — **MEDIUM-HIGH**
    - 3.1 [Deduplicate Global Event Listeners](#31-deduplicate-global-event-listeners)
    - 3.2 [Use Passive Event Listeners for Scrolling Performance](#32-use-passive-event-listeners-for-scrolling-performance)
    - 3.3 [Use SWR for Automatic Deduplication](#33-use-swr-for-automatic-deduplication)
    - 3.4 [Version and Minimize localStorage Data](#34-version-and-minimize-localstorage-data)
 4. [Re-render Optimization](#4-re-render-optimization) — **MEDIUM**
-   - 4.1 [Defer State Reads to Usage Point](#41-defer-state-reads-to-usage-point)
-   - 4.2 [Extract to Memoized Components](#42-extract-to-memoized-components)
-   - 4.3 [Narrow Effect Dependencies](#43-narrow-effect-dependencies)
-   - 4.4 [Subscribe to Derived State](#44-subscribe-to-derived-state)
-   - 4.5 [Use Functional setState Updates](#45-use-functional-setstate-updates)
-   - 4.6 [Use Lazy State Initialization](#46-use-lazy-state-initialization)
-   - 4.7 [Use Transitions for Non-Urgent Updates](#47-use-transitions-for-non-urgent-updates)
+   - 4.1 [Calculate Derived State During Rendering](#41-calculate-derived-state-during-rendering)
+   - 4.2 [Defer State Reads to Usage Point](#42-defer-state-reads-to-usage-point)
+   - 4.3 [Do not wrap a simple expression with a primitive result type in useMemo](#43-do-not-wrap-a-simple-expression-with-a-primitive-result-type-in-usememo)
+   - 4.4 [Don't Define Components Inside Components](#44-dont-define-components-inside-components)
+   - 4.5 [Extract Default Non-primitive Parameter Value from Memoized Component to Constant](#45-extract-default-non-primitive-parameter-value-from-memoized-component-to-constant)
+   - 4.6 [Extract to Memoized Components](#46-extract-to-memoized-components)
+   - 4.7 [Narrow Effect Dependencies](#47-narrow-effect-dependencies)
+   - 4.8 [Put Interaction Logic in Event Handlers](#48-put-interaction-logic-in-event-handlers)
+   - 4.9 [Split Combined Hook Computations](#49-split-combined-hook-computations)
+   - 4.10 [Subscribe to Derived State](#410-subscribe-to-derived-state)
+   - 4.11 [Use Functional setState Updates](#411-use-functional-setstate-updates)
+   - 4.12 [Use Lazy State Initialization](#412-use-lazy-state-initialization)
+   - 4.13 [Use Transitions for Non-Urgent Updates](#413-use-transitions-for-non-urgent-updates)
+   - 4.14 [Use useDeferredValue for Expensive Derived Renders](#414-use-usedeferredvalue-for-expensive-derived-renders)
+   - 4.15 [Use useRef for Transient Values](#415-use-useref-for-transient-values)
 5. [Rendering Performance](#5-rendering-performance) — **MEDIUM**
    - 5.1 [Animate SVG Wrapper Instead of SVG Element](#51-animate-svg-wrapper-instead-of-svg-element)
    - 5.2 [CSS content-visibility for Long Lists](#52-css-content-visibility-for-long-lists)
    - 5.3 [Hoist Static JSX Elements](#53-hoist-static-jsx-elements)
    - 5.4 [Optimize SVG Precision](#54-optimize-svg-precision)
    - 5.5 [Use Activity Component for Show/Hide](#55-use-activity-component-for-showhide)
-   - 5.6 [Use Explicit Conditional Rendering](#56-use-explicit-conditional-rendering)
+   - 5.6 [Use defer or async on Script Tags](#56-use-defer-or-async-on-script-tags)
+   - 5.7 [Use Explicit Conditional Rendering](#57-use-explicit-conditional-rendering)
+   - 5.8 [Use useTransition Over Manual Loading States](#58-use-usetransition-over-manual-loading-states)
 6. [JavaScript Performance](#6-javascript-performance) — **LOW-MEDIUM**
-   - 6.1 [Batch DOM CSS Changes](#61-batch-dom-css-changes)
+   - 6.1 [Avoid Layout Thrashing](#61-avoid-layout-thrashing)
    - 6.2 [Build Index Maps for Repeated Lookups](#62-build-index-maps-for-repeated-lookups)
    - 6.3 [Cache Property Access in Loops](#63-cache-property-access-in-loops)
    - 6.4 [Cache Repeated Function Calls](#64-cache-repeated-function-calls)
    - 6.5 [Cache Storage API Calls](#65-cache-storage-api-calls)
    - 6.6 [Combine Multiple Array Iterations](#66-combine-multiple-array-iterations)
-   - 6.7 [Early Length Check for Array Comparisons](#67-early-length-check-for-array-comparisons)
-   - 6.8 [Early Return from Functions](#68-early-return-from-functions)
-   - 6.9 [Hoist RegExp Creation](#69-hoist-regexp-creation)
-   - 6.10 [Use Loop for Min/Max Instead of Sort](#610-use-loop-for-minmax-instead-of-sort)
-   - 6.11 [Use Set/Map for O(1) Lookups](#611-use-setmap-for-o1-lookups)
-   - 6.12 [Use toSorted() Instead of sort() for Immutability](#612-use-tosorted-instead-of-sort-for-immutability)
+   - 6.7 [Defer Non-Critical Work with requestIdleCallback](#67-defer-non-critical-work-with-requestidlecallback)
+   - 6.8 [Early Length Check for Array Comparisons](#68-early-length-check-for-array-comparisons)
+   - 6.9 [Early Return from Functions](#69-early-return-from-functions)
+   - 6.10 [Hoist RegExp Creation](#610-hoist-regexp-creation)
+   - 6.11 [Use flatMap to Map and Filter in One Pass](#611-use-flatmap-to-map-and-filter-in-one-pass)
+   - 6.12 [Use Loop for Min/Max Instead of Sort](#612-use-loop-for-minmax-instead-of-sort)
+   - 6.13 [Use Set/Map for O(1) Lookups](#613-use-setmap-for-o1-lookups)
+   - 6.14 [Use toSorted() Instead of sort() for Immutability](#614-use-tosorted-instead-of-sort-for-immutability)
 7. [Advanced Patterns](#7-advanced-patterns) — **LOW**
-   - 7.1 [Store Event Handlers in Refs](#71-store-event-handlers-in-refs)
-   - 7.2 [useLatest for Stable Callback Refs](#72-uselatest-for-stable-callback-refs)
+   - 7.1 [Do Not Put Effect Events in Dependency Arrays](#71-do-not-put-effect-events-in-dependency-arrays)
+   - 7.2 [Initialize App Once, Not Per Mount](#72-initialize-app-once-not-per-mount)
+   - 7.3 [Store Event Handlers in Refs](#73-store-event-handlers-in-refs)
+   - 7.4 [useEffectEvent for Stable Callback Refs](#74-useeffectevent-for-stable-callback-refs)
 
 ---
 
@@ -75,7 +90,40 @@ Comprehensive performance optimization guide for React applications, designed fo
 
 Waterfalls are the #1 performance killer. Each sequential await adds full network latency. Eliminating them yields the largest gains.
 
-### 1.1 Defer Await Until Needed
+### 1.1 Check Cheap Conditions Before Async Flags
+
+**Impact: HIGH (avoids unnecessary async work when a synchronous guard already fails)**
+
+When a branch uses `await` for a flag or remote value and also requires a **cheap synchronous** condition (local props, request metadata, already-loaded state), evaluate the cheap condition **first**. Otherwise you pay for the async call even when the compound condition can never be true.
+
+This is a specialization of [Defer Await Until Needed](./async-defer-await.md) for `flag && cheapCondition` style checks.
+
+**Incorrect:**
+
+```typescript
+const someFlag = await getFlag()
+
+if (someFlag && someCondition) {
+  // ...
+}
+```
+
+**Correct:**
+
+```typescript
+if (someCondition) {
+  const someFlag = await getFlag()
+  if (someFlag) {
+    // ...
+  }
+}
+```
+
+This matters when `getFlag` hits the network, a feature-flag service, or `React.cache` / DB work: skipping it when `someCondition` is false removes that cost on the cold path.
+
+Keep the original order if `someCondition` is expensive, depends on the flag, or you must run side effects in a fixed order.
+
+### 1.2 Defer Await Until Needed
 
 **Impact: HIGH (avoids blocking unused code paths)**
 
@@ -151,7 +199,9 @@ async function updateResource(resourceId: string, userId: string) {
 
 This optimization is especially valuable when the skipped branch is frequently taken, or when the deferred operation is expensive.
 
-### 1.2 Dependency-Based Parallelization
+For `await getFlag()` combined with a cheap synchronous guard (`flag && someCondition`), see [Check Cheap Conditions Before Async Flags](./async-cheap-condition-before-await.md).
+
+### 1.3 Dependency-Based Parallelization
 
 **Impact: CRITICAL (2-10× improvement)**
 
@@ -181,41 +231,22 @@ const { user, config, profile } = await all({
 })
 ```
 
+**Alternative without extra dependencies:**
+
+We can also create all the promises first, and do `Promise.all()` at the end.
+
+```typescript
+const userPromise = fetchUser()
+const profilePromise = userPromise.then(user => fetchProfile(user.id))
+
+const [user, config, profile] = await Promise.all([
+  userPromise,
+  fetchConfig(),
+  profilePromise
+])
+```
+
 Reference: [https://github.com/shuding/better-all](https://github.com/shuding/better-all)
-
-### 1.3 Prevent Waterfall Chains in API Routes
-
-**Impact: CRITICAL (2-10× improvement)**
-
-In API routes and Server Actions, start independent operations immediately, even if you don't await them yet.
-
-**Incorrect: config waits for auth, data waits for both**
-
-```typescript
-export async function GET(request: Request) {
-  const session = await auth()
-  const config = await fetchConfig()
-  const data = await fetchData(session.user.id)
-  return Response.json({ data, config })
-}
-```
-
-**Correct: auth and config start immediately**
-
-```typescript
-export async function GET(request: Request) {
-  const sessionPromise = auth()
-  const configPromise = fetchConfig()
-  const session = await sessionPromise
-  const [config, data] = await Promise.all([
-    configPromise,
-    fetchData(session.user.id)
-  ])
-  return Response.json({ data, config })
-}
-```
-
-For operations with more complex dependency chains, use `better-all` to automatically maximize parallelism (see Dependency-Based Parallelization).
 
 ### 1.4 Promise.all() for Independent Operations
 
@@ -330,11 +361,8 @@ Both components share the same promise, so only one fetch occurs. Layout renders
 **When NOT to use this pattern:**
 
 - Critical data needed for layout decisions (affects positioning)
-
 - SEO-critical content above the fold
-
 - Small, fast queries where suspense overhead isn't worth it
-
 - When you want to avoid layout shift (loading → content jump)
 
 **Trade-off:** Faster initial paint vs potential layout shift. Choose based on your UX priorities.
@@ -381,6 +409,13 @@ import TextField from '@mui/material/TextField'
 // Loads only what you use
 ```
 
+> **TypeScript warning:** Some libraries (notably `lucide-react`) don't ship `.d.ts` files for their deep
+> import paths. Importing from `lucide-react/dist/esm/icons/check` resolves to an implicit `any`, causing
+> errors under `strict` or `noImplicitAny`. Verify the library exports types for its subpaths before
+> switching, or check whether your bundler can rewrite barrel imports for you — Vite's
+> `optimizeDeps`/`rollupOptions` and Webpack's `babel-plugin-import` both do this while preserving
+> the standard import syntax and its type safety.
+
 Direct imports provide 15-70% faster dev boot, 28% faster builds, 40% faster cold starts, and significantly faster HMR.
 
 Libraries commonly affected: `lucide-react`, `@mui/material`, `@mui/icons-material`, `@tabler/icons-react`, `react-icons`, `@headlessui/react`, `@radix-ui/react-*`, `lodash`, `ramda`, `date-fns`, `rxjs`, `react-use`.
@@ -398,7 +433,7 @@ function AnimationPlayer({ enabled, setEnabled }: { enabled: boolean; setEnabled
   const [frames, setFrames] = useState<Frame[] | null>(null)
 
   useEffect(() => {
-    if (enabled && !frames && typeof window !== 'undefined') {
+    if (enabled && !frames) {
       import('./animation-frames.js')
         .then(mod => setFrames(mod.frames))
         .catch(() => setEnabled(false))
@@ -490,7 +525,50 @@ function CodePanel({ code }: { code: string }) {
 }
 ```
 
-### 2.5 Preload Based on User Intent
+### 2.5 Prefer Statically Analyzable Paths
+
+**Impact: HIGH (avoids accidental broad bundles)**
+
+Bundlers work best when import paths are obvious at build time. If you hide the real path inside a variable or compose it too dynamically, the bundler either has to include every file that could possibly match, or warns that it cannot analyze the import at all.
+
+Prefer an explicit map of import thunks so the set of reachable modules stays narrow and predictable.
+
+When analysis becomes too broad, the cost is real:
+- Larger bundles and more chunks than you intended
+- Slower builds
+- Worse cold starts on first navigation
+
+**Incorrect: the bundler cannot tell what may be imported**
+
+```ts
+const PAGE_MODULES = {
+  home: './pages/home',
+  settings: './pages/settings',
+} as const
+
+const Page = await import(PAGE_MODULES[pageName])
+```
+
+The bundler sees `import(someVariable)`. Depending on the tool it will either bundle every module under `./pages/`, emit an "unanalyzable dynamic import" warning, or fail outright.
+
+**Correct: use an explicit map of allowed modules**
+
+```ts
+const PAGE_MODULES = {
+  home: () => import('./pages/home'),
+  settings: () => import('./pages/settings'),
+} as const
+
+const Page = await PAGE_MODULES[pageName]()
+```
+
+Each `import()` now has a literal specifier, so exactly two chunks are emitted and the map stays type-safe.
+
+The same rule applies to any path a build tool needs to resolve statically: make the final value literal at the callsite rather than assembling it from variables.
+
+Reference: [Vite features](https://vite.dev/guide/features.html), [Rollup dynamic import vars](https://www.npmjs.com/package/@rollup/plugin-dynamic-import-vars), [esbuild API](https://esbuild.github.io/api/), [Webpack dependency management](https://webpack.js.org/guides/dependency-management/)
+
+### 2.6 Preload Based on User Intent
 
 **Impact: MEDIUM (reduces perceived latency)**
 
@@ -781,7 +859,43 @@ function cachePrefs(user: FullUser) {
 
 Reducing unnecessary re-renders minimizes wasted computation and improves UI responsiveness.
 
-### 4.1 Defer State Reads to Usage Point
+### 4.1 Calculate Derived State During Rendering
+
+**Impact: MEDIUM (avoids redundant renders and state drift)**
+
+If a value can be computed from current props/state, do not store it in state or update it in an effect. Derive it during render to avoid extra renders and state drift. Do not set state in effects solely in response to prop changes; prefer derived values or keyed resets instead.
+
+**Incorrect: redundant state and effect**
+
+```tsx
+function Form() {
+  const [firstName, setFirstName] = useState('First')
+  const [lastName, setLastName] = useState('Last')
+  const [fullName, setFullName] = useState('')
+
+  useEffect(() => {
+    setFullName(firstName + ' ' + lastName)
+  }, [firstName, lastName])
+
+  return <p>{fullName}</p>
+}
+```
+
+**Correct: derive during render**
+
+```tsx
+function Form() {
+  const [firstName, setFirstName] = useState('First')
+  const [lastName, setLastName] = useState('Last')
+  const fullName = firstName + ' ' + lastName
+
+  return <p>{fullName}</p>
+}
+```
+
+References: [You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)
+
+### 4.2 Defer State Reads to Usage Point
 
 **Impact: MEDIUM (avoids unnecessary subscriptions)**
 
@@ -816,7 +930,146 @@ function ShareButton({ chatId }: { chatId: string }) {
 }
 ```
 
-### 4.2 Extract to Memoized Components
+### 4.3 Do not wrap a simple expression with a primitive result type in useMemo
+
+**Impact: LOW-MEDIUM (wasted computation on every render)**
+
+When an expression is simple (few logical or arithmetical operators) and has a primitive result type (boolean, number, string), do not wrap it in `useMemo`.
+Calling `useMemo` and comparing hook dependencies may consume more resources than the expression itself.
+
+**Incorrect:**
+
+```tsx
+function Header({ user, notifications }: Props) {
+  const isLoading = useMemo(() => {
+    return user.isLoading || notifications.isLoading
+  }, [user.isLoading, notifications.isLoading])
+
+  if (isLoading) return <Skeleton />
+  // return some markup
+}
+```
+
+**Correct:**
+
+```tsx
+function Header({ user, notifications }: Props) {
+  const isLoading = user.isLoading || notifications.isLoading
+
+  if (isLoading) return <Skeleton />
+  // return some markup
+}
+```
+
+### 4.4 Don't Define Components Inside Components
+
+**Impact: HIGH (prevents remount on every render)**
+
+Defining a component inside another component creates a new component type on every render. React sees a different component each time and fully remounts it, destroying all state and DOM.
+
+A common reason developers do this is to access parent variables without passing props. Always pass props instead.
+
+**Incorrect: remounts on every render**
+
+```tsx
+function UserProfile({ user, theme }) {
+  // Defined inside to access `theme` - BAD
+  const Avatar = () => (
+    <img
+      src={user.avatarUrl}
+      className={theme === 'dark' ? 'avatar-dark' : 'avatar-light'}
+    />
+  )
+
+  // Defined inside to access `user` - BAD
+  const Stats = () => (
+    <div>
+      <span>{user.followers} followers</span>
+      <span>{user.posts} posts</span>
+    </div>
+  )
+
+  return (
+    <div>
+      <Avatar />
+      <Stats />
+    </div>
+  )
+}
+```
+
+Every time `UserProfile` renders, `Avatar` and `Stats` are new component types. React unmounts the old instances and mounts new ones, losing any internal state, running effects again, and recreating DOM nodes.
+
+**Correct: pass props instead**
+
+```tsx
+function Avatar({ src, theme }: { src: string; theme: string }) {
+  return (
+    <img
+      src={src}
+      className={theme === 'dark' ? 'avatar-dark' : 'avatar-light'}
+    />
+  )
+}
+
+function Stats({ followers, posts }: { followers: number; posts: number }) {
+  return (
+    <div>
+      <span>{followers} followers</span>
+      <span>{posts} posts</span>
+    </div>
+  )
+}
+
+function UserProfile({ user, theme }) {
+  return (
+    <div>
+      <Avatar src={user.avatarUrl} theme={theme} />
+      <Stats followers={user.followers} posts={user.posts} />
+    </div>
+  )
+}
+```
+
+**Symptoms of this bug:**
+- Input fields lose focus on every keystroke
+- Animations restart unexpectedly
+- `useEffect` cleanup/setup runs on every parent render
+- Scroll position resets inside the component
+
+### 4.5 Extract Default Non-primitive Parameter Value from Memoized Component to Constant
+
+**Impact: MEDIUM (restores memoization by using a constant for default value)**
+
+When a memoized component has a default value for a non-primitive optional parameter, such as an array, function, or object, calling the component without that parameter results in broken memoization. This is because new value instances are created on every rerender, and they do not pass the strict equality comparison in `memo()`.
+
+To address this issue, extract the default value into a constant.
+
+**Incorrect: `onClick` has different values on every rerender**
+
+```tsx
+const UserAvatar = memo(function UserAvatar({ onClick = () => {} }: { onClick?: () => void }) {
+  // ...
+})
+
+// Used without optional onClick
+<UserAvatar />
+```
+
+**Correct: stable default value**
+
+```tsx
+const NOOP = () => {}
+
+const UserAvatar = memo(function UserAvatar({ onClick = NOOP }: { onClick?: () => void }) {
+  // ...
+})
+
+// Used without optional onClick
+<UserAvatar />
+```
+
+### 4.6 Extract to Memoized Components
 
 **Impact: MEDIUM (enables early returns)**
 
@@ -856,7 +1109,7 @@ function Profile({ user, loading }: Props) {
 
 **Note:** If your project has [React Compiler](https://react.dev/learn/react-compiler) enabled, manual memoization with `memo()` and `useMemo()` is not necessary. The compiler automatically optimizes re-renders.
 
-### 4.3 Narrow Effect Dependencies
+### 4.7 Narrow Effect Dependencies
 
 **Impact: LOW (minimizes effect re-runs)**
 
@@ -897,7 +1150,108 @@ useEffect(() => {
 }, [isMobile])
 ```
 
-### 4.4 Subscribe to Derived State
+### 4.8 Put Interaction Logic in Event Handlers
+
+**Impact: MEDIUM (avoids effect re-runs and duplicate side effects)**
+
+If a side effect is triggered by a specific user action (submit, click, drag), run it in that event handler. Do not model the action as state + effect; it makes effects re-run on unrelated changes and can duplicate the action.
+
+**Incorrect: event modeled as state + effect**
+
+```tsx
+function Form() {
+  const [submitted, setSubmitted] = useState(false)
+  const theme = useContext(ThemeContext)
+
+  useEffect(() => {
+    if (submitted) {
+      post('/api/register')
+      showToast('Registered', theme)
+    }
+  }, [submitted, theme])
+
+  return <button onClick={() => setSubmitted(true)}>Submit</button>
+}
+```
+
+**Correct: do it in the handler**
+
+```tsx
+function Form() {
+  const theme = useContext(ThemeContext)
+
+  function handleSubmit() {
+    post('/api/register')
+    showToast('Registered', theme)
+  }
+
+  return <button onClick={handleSubmit}>Submit</button>
+}
+```
+
+Reference: [Should this code move to an event handler?](https://react.dev/learn/removing-effect-dependencies#should-this-code-move-to-an-event-handler)
+
+### 4.9 Split Combined Hook Computations
+
+**Impact: MEDIUM (avoids recomputing independent steps)**
+
+When a hook contains multiple independent tasks with different dependencies, split them into separate hooks. A combined hook reruns all tasks when any dependency changes, even if some tasks don't use the changed value.
+
+**Incorrect: changing `sortOrder` recomputes filtering**
+
+```tsx
+const sortedProducts = useMemo(() => {
+  const filtered = products.filter((p) => p.category === category)
+  const sorted = filtered.toSorted((a, b) =>
+    sortOrder === "asc" ? a.price - b.price : b.price - a.price
+  )
+  return sorted
+}, [products, category, sortOrder])
+```
+
+**Correct: filtering only recomputes when products or category change**
+
+```tsx
+const filteredProducts = useMemo(
+  () => products.filter((p) => p.category === category),
+  [products, category]
+)
+
+const sortedProducts = useMemo(
+  () =>
+    filteredProducts.toSorted((a, b) =>
+      sortOrder === "asc" ? a.price - b.price : b.price - a.price
+    ),
+  [filteredProducts, sortOrder]
+)
+```
+
+This pattern also applies to `useEffect` when combining unrelated side effects:
+
+**Incorrect: both effects run when either dependency changes**
+
+```tsx
+useEffect(() => {
+  analytics.trackPageView(pathname)
+  document.title = `${pageTitle} | My App`
+}, [pathname, pageTitle])
+```
+
+**Correct: effects run independently**
+
+```tsx
+useEffect(() => {
+  analytics.trackPageView(pathname)
+}, [pathname])
+
+useEffect(() => {
+  document.title = `${pageTitle} | My App`
+}, [pageTitle])
+```
+
+**Note:** If your project has [React Compiler](https://react.dev/learn/react-compiler) enabled, it automatically optimizes dependency tracking and may handle some of these cases for you.
+
+### 4.10 Subscribe to Derived State
 
 **Impact: MEDIUM (reduces re-render frequency)**
 
@@ -922,7 +1276,7 @@ function Sidebar() {
 }
 ```
 
-### 4.5 Use Functional setState Updates
+### 4.11 Use Functional setState Updates
 
 **Impact: MEDIUM (prevents stale closures and unnecessary callback recreations)**
 
@@ -973,34 +1327,26 @@ function TodoList() {
 **Benefits:**
 
 1. **Stable callback references** - Callbacks don't need to be recreated when state changes
-
 2. **No stale closures** - Always operates on the latest state value
-
 3. **Fewer dependencies** - Simplifies dependency arrays and reduces memory leaks
-
 4. **Prevents bugs** - Eliminates the most common source of React closure bugs
 
 **When to use functional updates:**
 
 - Any setState that depends on the current state value
-
 - Inside useCallback/useMemo when state is needed
-
 - Event handlers that reference state
-
 - Async operations that update state
 
 **When direct updates are fine:**
 
 - Setting state to a static value: `setCount(0)`
-
 - Setting state from props/arguments only: `setName(newName)`
-
 - State doesn't depend on previous value
 
 **Note:** If your project has [React Compiler](https://react.dev/learn/react-compiler) enabled, the compiler can automatically optimize some cases, but functional updates are still recommended for correctness and to prevent stale closure bugs.
 
-### 4.6 Use Lazy State Initialization
+### 4.12 Use Lazy State Initialization
 
 **Impact: MEDIUM (wasted computation on every render)**
 
@@ -1054,7 +1400,7 @@ Use lazy initialization when computing initial values from localStorage/sessionS
 
 For simple primitives (`useState(0)`), direct references (`useState(props.value)`), or cheap literals (`useState({})`), the function form is unnecessary.
 
-### 4.7 Use Transitions for Non-Urgent Updates
+### 4.13 Use Transitions for Non-Urgent Updates
 
 **Impact: MEDIUM (maintains UI responsiveness)**
 
@@ -1087,6 +1433,130 @@ function ScrollTracker() {
     window.addEventListener('scroll', handler, { passive: true })
     return () => window.removeEventListener('scroll', handler)
   }, [])
+}
+```
+
+### 4.14 Use useDeferredValue for Expensive Derived Renders
+
+**Impact: MEDIUM (keeps input responsive during heavy computation)**
+
+When user input triggers expensive computations or renders, use `useDeferredValue` to keep the input responsive. The deferred value lags behind, allowing React to prioritize the input update and render the expensive result when idle.
+
+**Incorrect: input feels laggy while filtering**
+
+```tsx
+function Search({ items }: { items: Item[] }) {
+  const [query, setQuery] = useState('')
+  const filtered = items.filter(item => fuzzyMatch(item, query))
+
+  return (
+    <>
+      <input value={query} onChange={e => setQuery(e.target.value)} />
+      <ResultsList results={filtered} />
+    </>
+  )
+}
+```
+
+**Correct: input stays snappy, results render when ready**
+
+```tsx
+function Search({ items }: { items: Item[] }) {
+  const [query, setQuery] = useState('')
+  const deferredQuery = useDeferredValue(query)
+  const filtered = useMemo(
+    () => items.filter(item => fuzzyMatch(item, deferredQuery)),
+    [items, deferredQuery]
+  )
+  const isStale = query !== deferredQuery
+
+  return (
+    <>
+      <input value={query} onChange={e => setQuery(e.target.value)} />
+      <div style={{ opacity: isStale ? 0.7 : 1 }}>
+        <ResultsList results={filtered} />
+      </div>
+    </>
+  )
+}
+```
+
+**When to use:**
+
+- Filtering/searching large lists
+- Expensive visualizations (charts, graphs) reacting to input
+- Any derived state that causes noticeable render delays
+
+**Note:** Wrap the expensive computation in `useMemo` with the deferred value as a dependency, otherwise it still runs on every render.
+
+Reference: [React useDeferredValue](https://react.dev/reference/react/useDeferredValue)
+
+### 4.15 Use useRef for Transient Values
+
+**Impact: MEDIUM (avoids unnecessary re-renders on frequent updates)**
+
+When a value changes frequently and you don't want a re-render on every update (e.g., mouse trackers, intervals, transient flags), store it in `useRef` instead of `useState`. Keep component state for UI; use refs for temporary DOM-adjacent values. Updating a ref does not trigger a re-render.
+
+**Incorrect: renders every update**
+
+```tsx
+function Tracker() {
+  const [lastX, setLastX] = useState(0)
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => setLastX(e.clientX)
+    window.addEventListener('mousemove', onMove)
+    return () => window.removeEventListener('mousemove', onMove)
+  }, [])
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: lastX,
+        width: 8,
+        height: 8,
+        background: 'black',
+      }}
+    />
+  )
+}
+```
+
+**Correct: no re-render for tracking**
+
+```tsx
+function Tracker() {
+  const lastXRef = useRef(0)
+  const dotRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      lastXRef.current = e.clientX
+      const node = dotRef.current
+      if (node) {
+        node.style.transform = `translateX(${e.clientX}px)`
+      }
+    }
+    window.addEventListener('mousemove', onMove)
+    return () => window.removeEventListener('mousemove', onMove)
+  }, [])
+
+  return (
+    <div
+      ref={dotRef}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: 8,
+        height: 8,
+        background: 'black',
+        transform: 'translateX(0px)',
+      }}
+    />
+  )
 }
 ```
 
@@ -1263,7 +1733,46 @@ function Dropdown({ isOpen }: Props) {
 
 Avoids expensive re-renders and state loss.
 
-### 5.6 Use Explicit Conditional Rendering
+### 5.6 Use defer or async on Script Tags
+
+**Impact: HIGH (eliminates render-blocking)**
+
+Script tags without `defer` or `async` block HTML parsing while the script downloads and executes. This delays First Contentful Paint and Time to Interactive.
+
+- **`defer`**: Downloads in parallel, executes after HTML parsing completes, maintains execution order
+- **`async`**: Downloads in parallel, executes immediately when ready, no guaranteed order
+
+Use `defer` for scripts that depend on the DOM or on other scripts. Use `async` for independent scripts like analytics.
+
+**Incorrect: blocks rendering**
+
+```html
+<!-- index.html -->
+<head>
+  <script src="https://example.com/analytics.js"></script>
+  <script src="/scripts/utils.js"></script>
+</head>
+```
+
+**Correct: non-blocking**
+
+```html
+<!-- index.html -->
+<head>
+  <!-- Independent script - use async -->
+  <script src="https://example.com/analytics.js" async></script>
+  <!-- DOM-dependent script - use defer -->
+  <script src="/scripts/utils.js" defer></script>
+</head>
+```
+
+Module scripts (`<script type="module">`) are deferred by default, so a bundler-generated entry point is already non-blocking. This rule matters most for hand-written third-party tags you add to the HTML shell.
+
+For a script that is only needed once a particular feature is used, prefer not putting it in the HTML at all — load it on demand with a dynamic `import()`. See [Conditional Module Loading](./bundle-conditional.md).
+
+Reference: [MDN - Script element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#defer)
+
+### 5.7 Use Explicit Conditional Rendering
 
 **Impact: LOW (prevents rendering 0 or NaN)**
 
@@ -1299,6 +1808,77 @@ function Badge({ count }: { count: number }) {
 // When count = 5, renders: <div><span class="badge">5</span></div>
 ```
 
+### 5.8 Use useTransition Over Manual Loading States
+
+**Impact: LOW (reduces re-renders and improves code clarity)**
+
+Use `useTransition` instead of manual `useState` for loading states. This provides built-in `isPending` state and automatically manages transitions.
+
+**Incorrect: manual loading state**
+
+```tsx
+function SearchResults() {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleSearch = async (value: string) => {
+    setIsLoading(true)
+    setQuery(value)
+    const data = await fetchResults(value)
+    setResults(data)
+    setIsLoading(false)
+  }
+
+  return (
+    <>
+      <input onChange={(e) => handleSearch(e.target.value)} />
+      {isLoading && <Spinner />}
+      <ResultsList results={results} />
+    </>
+  )
+}
+```
+
+**Correct: useTransition with built-in pending state**
+
+```tsx
+import { useTransition, useState } from 'react'
+
+function SearchResults() {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [isPending, startTransition] = useTransition()
+
+  const handleSearch = (value: string) => {
+    setQuery(value) // Update input immediately
+    
+    startTransition(async () => {
+      // Fetch and update results
+      const data = await fetchResults(value)
+      setResults(data)
+    })
+  }
+
+  return (
+    <>
+      <input onChange={(e) => handleSearch(e.target.value)} />
+      {isPending && <Spinner />}
+      <ResultsList results={results} />
+    </>
+  )
+}
+```
+
+**Benefits:**
+
+- **Automatic pending state**: No need to manually manage `setIsLoading(true/false)`
+- **Error resilience**: Pending state correctly resets even if the transition throws
+- **Better responsiveness**: Keeps the UI responsive during updates
+- **Interrupt handling**: New transitions automatically cancel pending ones
+
+Reference: [useTransition](https://react.dev/reference/react/useTransition)
+
 ---
 
 ## 6. JavaScript Performance
@@ -1307,17 +1887,16 @@ function Badge({ count }: { count: number }) {
 
 Micro-optimizations for hot paths can add up to meaningful improvements.
 
-### 6.1 Batch DOM CSS Changes
+### 6.1 Avoid Layout Thrashing
 
-**Impact: MEDIUM (reduces reflows/repaints)**
+**Impact: MEDIUM (prevents forced synchronous layouts and reduces performance bottlenecks)**
 
-Avoid changing styles one property at a time. Group multiple CSS changes together via classes or `cssText` to minimize browser reflows.
+Avoid interleaving style writes with layout reads. When you read a layout property (like `offsetWidth`, `getBoundingClientRect()`, or `getComputedStyle()`) between style changes, the browser is forced to trigger a synchronous reflow.
 
-**Incorrect: multiple reflows**
-
+**This is OK: browser batches style changes**
 ```typescript
 function updateElementStyles(element: HTMLElement) {
-  // Each line triggers a reflow
+  // Each line invalidates style, but browser batches the recalculation
   element.style.width = '100px'
   element.style.height = '200px'
   element.style.backgroundColor = 'blue'
@@ -1325,48 +1904,72 @@ function updateElementStyles(element: HTMLElement) {
 }
 ```
 
-**Correct: add class - single reflow**
-
+**Incorrect: interleaved reads and writes force reflows**
 ```typescript
-// CSS file
+function layoutThrashing(element: HTMLElement) {
+  element.style.width = '100px'
+  const width = element.offsetWidth  // Forces reflow
+  element.style.height = '200px'
+  const height = element.offsetHeight  // Forces another reflow
+}
+```
+
+**Correct: batch writes, then read once**
+```typescript
+function updateElementStyles(element: HTMLElement) {
+  // Batch all writes together
+  element.style.width = '100px'
+  element.style.height = '200px'
+  element.style.backgroundColor = 'blue'
+  element.style.border = '1px solid black'
+  
+  // Read after all writes are done (single reflow)
+  const { width, height } = element.getBoundingClientRect()
+}
+```
+
+**Correct: batch reads, then writes**
+```typescript
+function avoidThrashing(element: HTMLElement) {
+  // Read phase - all layout queries first
+  const rect1 = element.getBoundingClientRect()
+  const offsetWidth = element.offsetWidth
+  const offsetHeight = element.offsetHeight
+  
+  // Write phase - all style changes after
+  element.style.width = '100px'
+  element.style.height = '200px'
+}
+```
+
+**Better: use CSS classes**
+```css
 .highlighted-box {
   width: 100px;
   height: 200px;
   background-color: blue;
   border: 1px solid black;
 }
-
-// JavaScript
-function updateElementStyles(element: HTMLElement) {
-  element.classList.add('highlighted-box')
-}
 ```
-
-**Correct: change cssText - single reflow**
-
 ```typescript
 function updateElementStyles(element: HTMLElement) {
-  element.style.cssText = `
-    width: 100px;
-    height: 200px;
-    background-color: blue;
-    border: 1px solid black;
-  `
+  element.classList.add('highlighted-box')
+  
+  const { width, height } = element.getBoundingClientRect()
 }
 ```
 
 **React example:**
-
 ```tsx
-// Incorrect: changing styles one by one
+// Incorrect: interleaving style changes with layout queries
 function Box({ isHighlighted }: { isHighlighted: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
   
   useEffect(() => {
     if (ref.current && isHighlighted) {
       ref.current.style.width = '100px'
+      const width = ref.current.offsetWidth // Forces layout
       ref.current.style.height = '200px'
-      ref.current.style.backgroundColor = 'blue'
     }
   }, [isHighlighted])
   
@@ -1383,7 +1986,9 @@ function Box({ isHighlighted }: { isHighlighted: boolean }) {
 }
 ```
 
-Prefer CSS classes over inline styles when possible. Classes are cached by the browser and provide better separation of concerns.
+Prefer CSS classes over inline styles when possible. CSS files are cached by the browser, and classes provide better separation of concerns and are easier to maintain.
+
+See [this gist](https://gist.github.com/paulirish/5d52fb081b3570c81e3a) and [CSS Triggers](https://csstriggers.com/) for more information on layout-forcing operations.
 
 ### 6.2 Build Index Maps for Repeated Lookups
 
@@ -1416,7 +2021,6 @@ function processOrders(orders: Order[], users: User[]) {
 ```
 
 Build map once (O(n)), then all lookups are O(1).
-
 For 1000 orders × 1000 users: 1M ops → 2K ops.
 
 ### 6.3 Cache Property Access in Loops
@@ -1517,7 +2121,7 @@ function onAuthChange() {
 
 Use a Map (not a hook) so it works everywhere: utilities, event handlers, not just React components.
 
-Reference: [https://vercel.com/blog/how-we-made-the-vercel-dashboard-twice-as-fast](https://vercel.com/blog/how-we-made-the-vercel-dashboard-twice-as-fast)
+Reference: [How we made the Vercel Dashboard twice as fast](https://vercel.com/blog/how-we-made-the-vercel-dashboard-twice-as-fast)
 
 ### 6.5 Cache Storage API Calls
 
@@ -1571,6 +2175,8 @@ function getCookie(name: string) {
 
 **Important: invalidate on external changes**
 
+If storage can change externally (another tab, server-set cookies), invalidate cache:
+
 ```typescript
 window.addEventListener('storage', (e) => {
   if (e.key) storageCache.delete(e.key)
@@ -1582,8 +2188,6 @@ document.addEventListener('visibilitychange', () => {
   }
 })
 ```
-
-If storage can change externally (another tab, server-set cookies), invalidate cache:
 
 ### 6.6 Combine Multiple Array Iterations
 
@@ -1613,7 +2217,106 @@ for (const user of users) {
 }
 ```
 
-### 6.7 Early Length Check for Array Comparisons
+### 6.7 Defer Non-Critical Work with requestIdleCallback
+
+**Impact: MEDIUM (keeps UI responsive during background tasks)**
+
+Use `requestIdleCallback()` to schedule non-critical work during browser idle periods. This keeps the main thread free for user interactions and animations, reducing jank and improving perceived performance.
+
+**Incorrect: blocks main thread during user interaction**
+
+```typescript
+function handleSearch(query: string) {
+  const results = searchItems(query)
+  setResults(results)
+
+  // These block the main thread immediately
+  analytics.track('search', { query })
+  saveToRecentSearches(query)
+  prefetchTopResults(results.slice(0, 3))
+}
+```
+
+**Correct: defers non-critical work to idle time**
+
+```typescript
+function handleSearch(query: string) {
+  const results = searchItems(query)
+  setResults(results)
+
+  // Defer non-critical work to idle periods
+  requestIdleCallback(() => {
+    analytics.track('search', { query })
+  })
+
+  requestIdleCallback(() => {
+    saveToRecentSearches(query)
+  })
+
+  requestIdleCallback(() => {
+    prefetchTopResults(results.slice(0, 3))
+  })
+}
+```
+
+**With timeout for required work:**
+
+```typescript
+// Ensure analytics fires within 2 seconds even if browser stays busy
+requestIdleCallback(
+  () => analytics.track('page_view', { path: location.pathname }),
+  { timeout: 2000 }
+)
+```
+
+**Chunking large tasks:**
+
+```typescript
+function processLargeDataset(items: Item[]) {
+  let index = 0
+
+  function processChunk(deadline: IdleDeadline) {
+    // Process items while we have idle time (aim for <50ms chunks)
+    while (index < items.length && deadline.timeRemaining() > 0) {
+      processItem(items[index])
+      index++
+    }
+
+    // Schedule next chunk if more items remain
+    if (index < items.length) {
+      requestIdleCallback(processChunk)
+    }
+  }
+
+  requestIdleCallback(processChunk)
+}
+```
+
+**With fallback for unsupported browsers:**
+
+```typescript
+const scheduleIdleWork = window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 1))
+
+scheduleIdleWork(() => {
+  // Non-critical work
+})
+```
+
+**When to use:**
+
+- Analytics and telemetry
+- Saving state to localStorage/IndexedDB
+- Prefetching resources for likely next actions
+- Processing non-urgent data transformations
+- Lazy initialization of non-critical features
+
+**When NOT to use:**
+
+- User-initiated actions that need immediate feedback
+- Rendering updates the user is waiting for
+- Time-sensitive operations
+
+### 6.8 Early Length Check for Array Comparisons
 
 **Impact: MEDIUM-HIGH (avoids expensive operations when lengths differ)**
 
@@ -1640,7 +2343,7 @@ function hasChanges(current: string[], original: string[]) {
   if (current.length !== original.length) {
     return true
   }
-  // Only sort/join when lengths match
+  // Only sort when lengths match
   const currentSorted = current.toSorted()
   const originalSorted = original.toSorted()
   for (let i = 0; i < currentSorted.length; i++) {
@@ -1653,16 +2356,12 @@ function hasChanges(current: string[], original: string[]) {
 ```
 
 This new approach is more efficient because:
-
 - It avoids the overhead of sorting and joining the arrays when lengths differ
-
 - It avoids consuming memory for the joined strings (especially important for large arrays)
-
 - It avoids mutating the original arrays
-
 - It returns early when a difference is found
 
-### 6.8 Early Return from Functions
+### 6.9 Early Return from Functions
 
 **Impact: LOW-MEDIUM (avoids unnecessary computation)**
 
@@ -1708,7 +2407,7 @@ function validateUsers(users: User[]) {
 }
 ```
 
-### 6.9 Hoist RegExp Creation
+### 6.10 Hoist RegExp Creation
 
 **Impact: LOW-MEDIUM (avoids recreation)**
 
@@ -1741,15 +2440,69 @@ function Highlighter({ text, query }: Props) {
 
 **Warning: global regex has mutable state**
 
+Global regex (`/g`) has mutable `lastIndex` state:
+
 ```typescript
 const regex = /foo/g
 regex.test('foo')  // true, lastIndex = 3
 regex.test('foo')  // false, lastIndex = 0
 ```
 
-Global regex (`/g`) has mutable `lastIndex` state:
+### 6.11 Use flatMap to Map and Filter in One Pass
 
-### 6.10 Use Loop for Min/Max Instead of Sort
+**Impact: LOW-MEDIUM (eliminates intermediate array)**
+
+Chaining `.map().filter(Boolean)` creates an intermediate array and iterates twice. Use `.flatMap()` to transform and filter in a single pass.
+
+**Incorrect: 2 iterations, intermediate array**
+
+```typescript
+const userNames = users
+  .map(user => user.isActive ? user.name : null)
+  .filter(Boolean)
+```
+
+**Correct: 1 iteration, no intermediate array**
+
+```typescript
+const userNames = users.flatMap(user =>
+  user.isActive ? [user.name] : []
+)
+```
+
+**More examples:**
+
+```typescript
+// Extract valid emails from responses
+// Before
+const emails = responses
+  .map(r => r.success ? r.data.email : null)
+  .filter(Boolean)
+
+// After
+const emails = responses.flatMap(r =>
+  r.success ? [r.data.email] : []
+)
+
+// Parse and filter valid numbers
+// Before
+const numbers = strings
+  .map(s => parseInt(s, 10))
+  .filter(n => !isNaN(n))
+
+// After
+const numbers = strings.flatMap(s => {
+  const n = parseInt(s, 10)
+  return isNaN(n) ? [] : [n]
+})
+```
+
+**When to use:**
+- Transforming items while filtering some out
+- Conditional mapping where some inputs produce no output
+- Parsing/validating where invalid inputs should be skipped
+
+### 6.12 Use Loop for Min/Max Instead of Sort
 
 **Impact: LOW (O(n) instead of O(n log n))**
 
@@ -1825,9 +2578,9 @@ const min = Math.min(...numbers)
 const max = Math.max(...numbers)
 ```
 
-This works for small arrays but can be slower for very large arrays due to spread operator limitations. Use the loop approach for reliability.
+This works for small arrays, but can be slower or just throw an error for very large arrays due to spread operator limitations. Maximal array length is approximately 124000 in Chrome 143 and 638000 in Safari 18; exact numbers may vary - see [the fiddle](https://jsfiddle.net/qw1jabsx/4/). Use the loop approach for reliability.
 
-### 6.11 Use Set/Map for O(1) Lookups
+### 6.13 Use Set/Map for O(1) Lookups
 
 **Impact: LOW-MEDIUM (O(n) to O(1))**
 
@@ -1847,7 +2600,7 @@ const allowedIds = new Set(['a', 'b', 'c', ...])
 items.filter(item => allowedIds.has(item.id))
 ```
 
-### 6.12 Use toSorted() Instead of sort() for Immutability
+### 6.14 Use toSorted() Instead of sort() for Immutability
 
 **Impact: MEDIUM-HIGH (prevents mutation bugs in React state)**
 
@@ -1882,26 +2635,22 @@ function UserList({ users }: { users: User[] }) {
 **Why this matters in React:**
 
 1. Props/state mutations break React's immutability model - React expects props and state to be treated as read-only
-
 2. Causes stale closure bugs - Mutating arrays inside closures (callbacks, effects) can lead to unexpected behavior
 
 **Browser support: fallback for older browsers**
+
+`.toSorted()` is available in all modern browsers (Chrome 110+, Safari 16+, Firefox 115+, Node.js 20+). For older environments, use spread operator:
 
 ```typescript
 // Fallback for older browsers
 const sorted = [...items].sort((a, b) => a.value - b.value)
 ```
 
-`.toSorted()` is available in all modern browsers (Chrome 110+, Safari 16+, Firefox 115+, Node.js 20+). For older environments, use spread operator:
-
 **Other immutable array methods:**
 
 - `.toSorted()` - immutable sort
-
 - `.toReversed()` - immutable reverse
-
 - `.toSpliced()` - immutable splice
-
 - `.with()` - immutable element replacement
 
 ---
@@ -1912,7 +2661,97 @@ const sorted = [...items].sort((a, b) => a.value - b.value)
 
 Advanced patterns for specific cases that require careful implementation.
 
-### 7.1 Store Event Handlers in Refs
+### 7.1 Do Not Put Effect Events in Dependency Arrays
+
+**Impact: LOW (avoids unnecessary effect re-runs and lint errors)**
+
+Effect Event functions do not have a stable identity. Their identity intentionally changes on every render. Do not include the function returned by `useEffectEvent` in a `useEffect` dependency array. Keep the actual reactive values as dependencies and call the Effect Event from inside the effect body or subscriptions created by that effect.
+
+**Incorrect: Effect Event added as a dependency**
+
+```tsx
+import { useEffect, useEffectEvent } from 'react'
+
+function ChatRoom({ roomId, onConnected }: {
+  roomId: string
+  onConnected: () => void
+}) {
+  const handleConnected = useEffectEvent(onConnected)
+
+  useEffect(() => {
+    const connection = createConnection(roomId)
+    connection.on('connected', handleConnected)
+    connection.connect()
+
+    return () => connection.disconnect()
+  }, [roomId, handleConnected])
+}
+```
+
+Including the Effect Event in dependencies makes the effect re-run every render and triggers the React Hooks lint rule.
+
+**Correct: depend on reactive values, not the Effect Event**
+
+```tsx
+import { useEffect, useEffectEvent } from 'react'
+
+function ChatRoom({ roomId, onConnected }: {
+  roomId: string
+  onConnected: () => void
+}) {
+  const handleConnected = useEffectEvent(onConnected)
+
+  useEffect(() => {
+    const connection = createConnection(roomId)
+    connection.on('connected', handleConnected)
+    connection.connect()
+
+    return () => connection.disconnect()
+  }, [roomId])
+}
+```
+
+Reference: [React useEffectEvent: Effect Event in deps](https://react.dev/reference/react/useEffectEvent#effect-event-in-deps)
+
+### 7.2 Initialize App Once, Not Per Mount
+
+**Impact: LOW-MEDIUM (avoids duplicate init in development)**
+
+Do not put app-wide initialization that must run once per app load inside `useEffect([])` of a component. Components can remount and effects will re-run. Use a module-level guard or top-level init in the entry module instead.
+
+**Incorrect: runs twice in dev, re-runs on remount**
+
+```tsx
+function Comp() {
+  useEffect(() => {
+    loadFromStorage()
+    checkAuthToken()
+  }, [])
+
+  // ...
+}
+```
+
+**Correct: once per app load**
+
+```tsx
+let didInit = false
+
+function Comp() {
+  useEffect(() => {
+    if (didInit) return
+    didInit = true
+    loadFromStorage()
+    checkAuthToken()
+  }, [])
+
+  // ...
+}
+```
+
+Reference: [Initializing the application](https://react.dev/learn/you-might-not-need-an-effect#initializing-the-application)
+
+### 7.3 Store Event Handlers in Refs
 
 **Impact: LOW (stable subscriptions)**
 
@@ -1921,7 +2760,7 @@ Store callbacks in refs when used in effects that shouldn't re-subscribe on call
 **Incorrect: re-subscribes on every render**
 
 ```tsx
-function useWindowEvent(event: string, handler: () => void) {
+function useWindowEvent(event: string, handler: (e) => void) {
   useEffect(() => {
     window.addEventListener(event, handler)
     return () => window.removeEventListener(event, handler)
@@ -1932,9 +2771,26 @@ function useWindowEvent(event: string, handler: () => void) {
 **Correct: stable subscription**
 
 ```tsx
+function useWindowEvent(event: string, handler: (e) => void) {
+  const handlerRef = useRef(handler)
+  useEffect(() => {
+    handlerRef.current = handler
+  }, [handler])
+
+  useEffect(() => {
+    const listener = (e) => handlerRef.current(e)
+    window.addEventListener(event, listener)
+    return () => window.removeEventListener(event, listener)
+  }, [event])
+}
+```
+
+**Alternative: use `useEffectEvent` if you're on latest React:**
+
+```tsx
 import { useEffectEvent } from 'react'
 
-function useWindowEvent(event: string, handler: () => void) {
+function useWindowEvent(event: string, handler: (e) => void) {
   const onEvent = useEffectEvent(handler)
 
   useEffect(() => {
@@ -1944,27 +2800,13 @@ function useWindowEvent(event: string, handler: () => void) {
 }
 ```
 
-**Alternative: use `useEffectEvent` if you're on latest React:**
-
 `useEffectEvent` provides a cleaner API for the same pattern: it creates a stable function reference that always calls the latest version of the handler.
 
-### 7.2 useLatest for Stable Callback Refs
+### 7.4 useEffectEvent for Stable Callback Refs
 
 **Impact: LOW (prevents effect re-runs)**
 
 Access latest values in callbacks without adding them to dependency arrays. Prevents effect re-runs while avoiding stale closures.
-
-**Implementation:**
-
-```typescript
-function useLatest<T>(value: T) {
-  const ref = useRef(value)
-  useEffect(() => {
-    ref.current = value
-  }, [value])
-  return ref
-}
-```
 
 **Incorrect: effect re-runs on every callback change**
 
@@ -1979,15 +2821,17 @@ function SearchInput({ onSearch }: { onSearch: (q: string) => void }) {
 }
 ```
 
-**Correct: stable effect, fresh callback**
+**Correct: using React's useEffectEvent**
 
 ```tsx
+import { useEffectEvent } from 'react';
+
 function SearchInput({ onSearch }: { onSearch: (q: string) => void }) {
   const [query, setQuery] = useState('')
-  const onSearchRef = useLatest(onSearch)
+  const onSearchEvent = useEffectEvent(onSearch)
 
   useEffect(() => {
-    const timeout = setTimeout(() => onSearchRef.current(query), 300)
+    const timeout = setTimeout(() => onSearchEvent(query), 300)
     return () => clearTimeout(timeout)
   }, [query])
 }
@@ -2000,4 +2844,5 @@ function SearchInput({ onSearch }: { onSearch: (q: string) => void }) {
 1. [https://react.dev](https://react.dev)
 2. [https://swr.vercel.app](https://swr.vercel.app)
 3. [https://github.com/shuding/better-all](https://github.com/shuding/better-all)
-4. [https://github.com/isaacs/node-lru-cache](https://github.com/isaacs/node-lru-cache)
+4. [https://vite.dev/guide/features.html](https://vite.dev/guide/features.html)
+5. [https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script)
