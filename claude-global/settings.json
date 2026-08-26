@@ -1,4 +1,19 @@
 {
+  "permissions": {
+    "deny": [
+      "Artifact",
+      "Bash(eslint .)",
+      "Bash(eslint . *)",
+      "Bash(npx eslint .)",
+      "Bash(npx eslint . *)",
+      "Bash(pnpm run lint)",
+      "Bash(pnpm run lint:eslint)",
+      "Bash(pnpm run lint:eslint *)",
+      "Bash(npm run lint)",
+      "Bash(npm run lint:eslint)",
+      "Bash(yarn lint)"
+    ]
+  },
   "agentPushNotifEnabled": true,
   "autoCompactEnabled": false,
   "autoMemoryEnabled": false,
