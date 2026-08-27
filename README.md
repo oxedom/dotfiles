@@ -134,8 +134,6 @@ npx skills@latest add oxedom/dotfiles -l        # just list them
 | `playwright-cli` | Drive a browser: forms, screenshots, scraping |
 | `react-best-practices` | React performance rules (rendering, bundles, async) |
 | `skill-creator` | Write new skills |
-| `testing` | Test strategy, stateful tests, LLM evals |
-| `tmux-merge-sessions` | Collapse duplicate tmux sessions |
 | `using-git-worktrees` | Isolated worktrees with branch conventions |
 
 ## Claude/Codex bridge
