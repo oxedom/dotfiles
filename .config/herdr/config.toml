@@ -12,19 +12,37 @@ name = "catppuccin"
 auto_switch = false
 
 [keys]
-# Match tmux muscle memory. herdr's default is ctrl+b.
-prefix = "ctrl+a"
+# tmux owns ctrl+a (see .tmux.conf). herdr keeps its default ctrl+b, which
+# .tmux.conf explicitly `unbind`s, so it passes through cleanly when herdr
+# runs nested. Two prefixes, zero collisions.
+prefix = "ctrl+b"
 
-# --- unset by default, worth binding when running a herd ---
-# Jump straight to agent N in the sidebar. The reason to use herdr over tmux.
+# Same feel as tmux, one layer down. These only fire while tmux passthrough
+# is on (F12) -- tmux's root-table `bind -n` claims shift/alt arrows before
+# the pane ever sees them, so there is no way to have both at once.
+previous_tab     = "shift+left"
+next_tab         = "shift+right"
+focus_pane_left  = "alt+left"
+focus_pane_right = "alt+right"
+focus_pane_up    = "alt+up"
+focus_pane_down  = "alt+down"
+
+# Was prefix+shift+left/right, which could never fire nested: tmux has no
+# idea herdr is mid-prefix, so its root S-Left/S-Right ate the second
+# keypress. Letters are safe on both sides, passthrough or not.
+previous_workspace = "prefix+shift+h"
+next_workspace     = "prefix+shift+l"
+
+# Cycle every agent session across all workspaces. No tmux analogue.
+previous_agent = "prefix+shift+j"
+next_agent     = "prefix+shift+k"
+
+# Jump straight to agent N in the sidebar.
 focus_agent = "prefix+alt+1..9"
-next_workspace = "prefix+shift+right"
-previous_workspace = "prefix+shift+left"
+switch_workspace = "prefix+shift+1..9"
 # prefix+tab already cycles panes; this is global back-and-forth.
 last_pane = "prefix+space"
-switch_workspace = "prefix+shift+1..9"
 
-# Popups are session-modal: they don't disturb the pane layout.
 [[keys.command]]
 key = "prefix+alt+g"
 type = "popup"
