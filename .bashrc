@@ -83,8 +83,8 @@ export NVM_DIR="$HOME/.nvm"
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
-# Cargo
-. "$HOME/.cargo/env"
+# Cargo is optional on this devbox; do not break noninteractive workers when it is absent.
+[ -r "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
 # Go
 export PATH=$PATH:/usr/local/go/bin
