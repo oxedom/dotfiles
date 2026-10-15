@@ -25,6 +25,10 @@ It will:
    from `claude-global/skills-lock.json`.
 4. **bridge** — expose Claude skills, commands, subagents, and compatible global
    imports through Codex's native discovery paths.
+5. **omarchy** — on Omarchy machines only, copy the Hyprland monitor scale, bar
+   layout (`shell.json`), custom themes and Firefox `user.js` into place. These are
+   copied rather than symlinked because Omarchy replaces symlinks when it saves
+   them, so after changing a setting live run `init capture` to pull it back here.
 
 MCP servers need credentials. Create `~/dotfiles/secrets.sh` (gitignored) using
 `claude-global/mcp-servers.example.json` as the key list, then re-run `init claude`.

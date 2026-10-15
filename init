@@ -5,6 +5,8 @@
 #   ~/dotfiles/init            # everything
 #   ~/dotfiles/init shell      # shell + editor configs only
 #   ~/dotfiles/init gnome      # GNOME desktop settings only
+#   ~/dotfiles/init omarchy    # Omarchy desktop configs only (copied, not linked)
+#   ~/dotfiles/init capture    # copy live Omarchy configs back into this repo
 #   ~/dotfiles/init claude     # ~/.claude config only
 #   ~/dotfiles/init skills     # reinstall agent skills from the lockfile
 #
@@ -103,6 +105,79 @@ if [ "$TARGET" = all ] || [ "$TARGET" = gnome ]; then
     set_ org.gnome.desktop.session    idle-delay "uint32 0"
     set_ org.gnome.desktop.screensaver idle-activation-enabled false
   fi
+fi
+
+# ---------------------------------------------------------------- omarchy
+# Copied, not linked: the Omarchy shell saves shell.json atomically and its
+# commands edit configs with `sed -i`, and both replace a symlink with a plain
+# file. After changing a setting live, pull it back with `init capture`.
+OMARCHY_FILES=(
+  .config/hypr/monitors.lua
+  .config/omarchy/shell.json
+  .config/omarchy/themes/afb
+  .config/omarchy/themes/american-football
+)
+
+# Firefox names its profile folder randomly per install, so find the default one.
+firefox_profile() {
+  local base ini
+  for base in "$HOME/.config/mozilla/firefox" "$HOME/.mozilla/firefox"; do
+    ini="$base/installs.ini"
+    [ -f "$ini" ] || continue
+    sed -n 's/^Default=//p' "$ini" | head -1 | sed "s|^|$base/|"
+    return
+  done
+}
+
+# put <src> <dest> — copy, backing up a different file that's in the way.
+put() {
+  local src="$1" dest="$2"
+  [ -e "$src" ] || { info "[skip] missing: $src"; return; }
+  if [ -e "$dest" ] && diff -rq "$src" "$dest" >/dev/null 2>&1; then
+    info "[ok]   $dest"; return
+  fi
+  mkdir -p "$(dirname "$dest")"
+  [ -e "$dest" ] && mv "$dest" "$dest.bak.$(date +%s)" && info "[bak]  $dest -> $dest.bak.*"
+  cp -r "$src" "$dest"
+  info "[copy] $dest"
+}
+
+if [ "$TARGET" = all ] || [ "$TARGET" = omarchy ]; then
+  head_ "Omarchy desktop configs"
+
+  if ! command -v omarchy >/dev/null 2>&1; then
+    info "[skip] omarchy not found (not an Omarchy machine)"
+  else
+    for f in "${OMARCHY_FILES[@]}"; do put "$DIR/$f" "$HOME/$f"; done
+
+    profile="$(firefox_profile)"
+    if [ -n "$profile" ]; then
+      put "$DIR/firefox/user.js" "$profile/user.js"
+    else
+      info "[skip] no Firefox profile yet. Open Firefox once, then: init omarchy"
+    fi
+  fi
+fi
+
+# Reverse of the omarchy section: copy the live configs back into this repo.
+if [ "$TARGET" = capture ]; then
+  head_ "Capture Omarchy configs into the repo"
+
+  for f in "${OMARCHY_FILES[@]}"; do
+    [ -e "$HOME/$f" ] || { info "[skip] missing: $HOME/$f"; continue; }
+    mkdir -p "$(dirname "$DIR/$f")"
+    rm -rf "$DIR/$f"
+    cp -r "$HOME/$f" "$DIR/$f"
+    info "[take] $f"
+  done
+
+  profile="$(firefox_profile)"
+  if [ -n "$profile" ] && [ -f "$profile/user.js" ]; then
+    mkdir -p "$DIR/firefox"
+    cp "$profile/user.js" "$DIR/firefox/user.js"
+    info "[take] firefox/user.js"
+  fi
+  info "Review with: git -C $DIR diff"
 fi
 
 # ---------------------------------------------------------------- claude
