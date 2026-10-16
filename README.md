@@ -25,8 +25,9 @@ It will:
    from `claude-global/skills-lock.json`.
 4. **bridge** — expose Claude skills, commands, subagents, and compatible global
    imports through Codex's native discovery paths.
-5. **omarchy** — on Omarchy machines only, copy the Hyprland monitor scale, bar
-   layout (`shell.json`), custom themes and Firefox `user.js` into place. These are
+5. **omarchy** — on Omarchy machines only, copy the Hyprland configs (including
+   English/Hebrew input), bar layout, terminal settings, shell prompt, default apps,
+   custom themes and Firefox `user.js` into place. These are
    copied rather than symlinked because Omarchy replaces symlinks when it saves
    them, so after changing a setting live run `init capture` to pull it back here.
 
@@ -164,6 +165,32 @@ Existing hand-written Codex files are never overwritten.
 Third-party skills are not vendored here. They're recorded in
 `claude-global/skills-lock.json` and reinstalled from source by `init skills`
 (or `skills-sync`).
+
+## Saving and restoring Omarchy
+
+After changing your desktop settings:
+
+```bash
+~/dotfiles/init capture
+git -C ~/dotfiles status --short
+git -C ~/dotfiles diff
+# Review new files too before staging, committing, and pushing.
+```
+
+`OMARCHY_FILES` in `init` is the explicit capture/restore list. Add individual
+reviewed files there instead of copying all of `~/.config`. Never add browser
+profiles, auth files, history, caches, SSH keys, or cloud credentials. Themes are
+copied as directories: review any new files in them before committing.
+`.XCompose` stays local because it contains personal contact details.
+
+On a fresh Omarchy installation, clone this repository and run `~/dotfiles/init
+omarchy` (or `~/dotfiles/init` for the full setup). Existing differing files are
+backed up. Then run `hyprctl reload` and `hyprctl configerrors` from your desktop
+session. Choose your saved custom theme with `omarchy theme set <name>`; generated
+theme files in `~/.local/state/omarchy` are intentionally excluded.
+
+This repository saves selected configuration, not your whole home directory or
+installed applications. Keep an encrypted backup of personal files separately.
 
 ## Secrets
 

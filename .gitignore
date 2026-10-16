@@ -4,3 +4,22 @@ secrets.sh
 *.jks
 *.keystore
 .env
+
+# Local backups, credentials, and runtime data must stay off GitHub.
+*.bak.*
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.*
+.ssh/
+.aws/
+.gnupg/
+.config/gh/
+.config/op/
+.config/1Password/
+.config/gcloud/
+.config/hcloud/
+.config/pnpm-dev-guard.local.bash
