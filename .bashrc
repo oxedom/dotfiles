@@ -13,6 +13,10 @@ HISTFILESIZE=2000
 # Window size check
 shopt -s checkwinsize
 
+# Audible bell on tab completion (no match / end of completion cycle)
+bind "set bell-style audible"
+bind "set prefer-visible-bell off"
+
 # Lesspipe
 [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
