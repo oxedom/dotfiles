@@ -47,7 +47,7 @@ claude-global/    Everything that becomes ~/.claude — symlinked by init.
   hooks/            herdr agent-state (managed by `herdr integration install claude`)
   sounds/           finish.mp3 — also linked to ~/.config/herdr/sounds
   skills-lock.json  Third-party skills, for reinstall on a new machine
-.config/          herdr, nvim, kitty, pnpm
+.config/          herdr, nvim, kitty, pnpm, mise
 .bashrc .tmux.conf .Xmodmap aliases.sh
 keybindings.json  VS Code
 ```

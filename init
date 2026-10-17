@@ -57,6 +57,7 @@ if [ "$TARGET" = all ] || [ "$TARGET" = shell ]; then
   link "$DIR/.tmux.conf"   "$HOME/.tmux.conf"
   link "$DIR/.config/nvim" "$HOME/.config/nvim"
   link "$DIR/.config/pnpm" "$HOME/.config/pnpm"
+  link "$DIR/.config/mise" "$HOME/.config/mise"
 
   # herdr keeps sockets, logs and session.json in this directory, so link the
   # config file itself rather than the directory.
