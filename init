@@ -9,6 +9,7 @@
 #   ~/dotfiles/init capture    # copy live Omarchy configs back into this repo
 #   ~/dotfiles/init claude     # ~/.claude config only
 #   ~/dotfiles/init skills     # reinstall agent skills from the lockfile
+#   ~/dotfiles/init exit-node  # Tailscale exit node (hosts in EXIT_NODE_HOSTS; sudo)
 #
 set -uo pipefail
 
@@ -247,6 +248,35 @@ if [ "$TARGET" = all ] || [ "$TARGET" = skills ]; then
         npx -y skills@latest add "$src" -g -s "$names" -a claude -y 2>&1 | sed 's/^/         /'
       done
     fi
+  fi
+fi
+
+# ---------------------------------------------------------------- exit-node
+# Only the hosts listed here advertise themselves as a Tailscale exit node, so
+# cloning these dotfiles onto another box doesn't turn it into one.
+EXIT_NODE_HOSTS=(sam)
+SYSCTL_SRC="$DIR/system/etc/sysctl.d/99-tailscale-exit-node.conf"
+SYSCTL_DEST=/etc/sysctl.d/99-tailscale-exit-node.conf
+
+if [ "$TARGET" = all ] || [ "$TARGET" = exit-node ]; then
+  head_ "Tailscale exit node"
+
+  host="$(hostname)"
+  if [[ " ${EXIT_NODE_HOSTS[*]} " != *" $host "* ]]; then
+    info "[skip] $host is not in EXIT_NODE_HOSTS"
+  elif ! command -v tailscale >/dev/null 2>&1 || [ ! -d /etc/sysctl.d ]; then
+    info "[skip] needs tailscale and /etc/sysctl.d (Linux)"
+  else
+    if cmp -s "$SYSCTL_SRC" "$SYSCTL_DEST"; then
+      info "[ok]   $SYSCTL_DEST"
+    else
+      sudo install -m 644 "$SYSCTL_SRC" "$SYSCTL_DEST" && info "[copy] $SYSCTL_DEST"
+    fi
+    sudo sysctl -q -p "$SYSCTL_DEST" && info "[set]  ip_forward, ipv6 forwarding"
+
+    # Idempotent, and `set` leaves other prefs alone. Advertise only, never
+    # --exit-node: this host serves as an exit node, it doesn't use one.
+    tailscale set --advertise-exit-node && info "[set]  advertising exit node"
   fi
 fi
 

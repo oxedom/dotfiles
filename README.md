@@ -31,6 +31,11 @@ It will:
    copied rather than symlinked because Omarchy replaces symlinks when it saves
    them, so after changing a setting live run `init capture` to pull it back here.
 
+6. **exit-node**: on hosts listed in `EXIT_NODE_HOSTS` only, install
+   `system/etc/sysctl.d/99-tailscale-exit-node.conf` (IPv4/IPv6 forwarding) and
+   run `tailscale set --advertise-exit-node`. Needs sudo. Approve the exit node
+   once in the Tailscale admin console under Machines → host → Edit route settings.
+
 MCP servers need credentials. Create `~/dotfiles/secrets.sh` (gitignored) using
 `claude-global/mcp-servers.example.json` as the key list, then re-run `init claude`.
 
